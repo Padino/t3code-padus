@@ -1,12 +1,21 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import {
+  DEFAULT_THEME,
+  DEFAULT_THEME_PRESET,
+  isTheme,
+  isThemePresetId,
+  type Theme,
+  type ThemePresetId,
+} from "../theme";
 
-type Theme = "light" | "dark" | "system";
 type ThemeSnapshot = {
+  themePreset: ThemePresetId;
   theme: Theme;
   systemDark: boolean;
 };
 
 const STORAGE_KEY = "t3code:theme";
+const PRESET_STORAGE_KEY = "t3code:theme-preset";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 let listeners: Array<() => void> = [];
@@ -22,16 +31,21 @@ function getSystemDark(): boolean {
 
 function getStored(): Theme {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
-  return "system";
+  return isTheme(raw) ? raw : DEFAULT_THEME;
 }
 
-function applyTheme(theme: Theme, suppressTransitions = false) {
+function getStoredPreset(): ThemePresetId {
+  const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+  return isThemePresetId(raw) ? raw : DEFAULT_THEME_PRESET;
+}
+
+function applyTheme(theme: Theme, themePreset: ThemePresetId, suppressTransitions = false) {
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }
   const isDark = theme === "dark" || (theme === "system" && getSystemDark());
   document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.dataset.themePreset = themePreset;
   syncDesktopTheme(theme);
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
@@ -58,17 +72,23 @@ function syncDesktopTheme(theme: Theme) {
 }
 
 // Apply immediately on module load to prevent flash
-applyTheme(getStored());
+applyTheme(getStored(), getStoredPreset());
 
 function getSnapshot(): ThemeSnapshot {
   const theme = getStored();
+  const themePreset = getStoredPreset();
   const systemDark = theme === "system" ? getSystemDark() : false;
 
-  if (lastSnapshot && lastSnapshot.theme === theme && lastSnapshot.systemDark === systemDark) {
+  if (
+    lastSnapshot &&
+    lastSnapshot.theme === theme &&
+    lastSnapshot.themePreset === themePreset &&
+    lastSnapshot.systemDark === systemDark
+  ) {
     return lastSnapshot;
   }
 
-  lastSnapshot = { theme, systemDark };
+  lastSnapshot = { theme, themePreset, systemDark };
   return lastSnapshot;
 }
 
@@ -78,15 +98,15 @@ function subscribe(listener: () => void): () => void {
   // Listen for system preference changes
   const mq = window.matchMedia(MEDIA_QUERY);
   const handleChange = () => {
-    if (getStored() === "system") applyTheme("system", true);
+    if (getStored() === "system") applyTheme("system", getStoredPreset(), true);
     emitChange();
   };
   mq.addEventListener("change", handleChange);
 
   // Listen for storage changes from other tabs
   const handleStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      applyTheme(getStored(), true);
+    if (e.key === STORAGE_KEY || e.key === PRESET_STORAGE_KEY) {
+      applyTheme(getStored(), getStoredPreset(), true);
       emitChange();
     }
   };
@@ -102,20 +122,27 @@ function subscribe(listener: () => void): () => void {
 export function useTheme() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   const theme = snapshot.theme;
+  const themePreset = snapshot.themePreset;
 
   const resolvedTheme: "light" | "dark" =
     theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
 
   const setTheme = useCallback((next: Theme) => {
     localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next, true);
+    applyTheme(next, getStoredPreset(), true);
+    emitChange();
+  }, []);
+
+  const setThemePreset = useCallback((next: ThemePresetId) => {
+    localStorage.setItem(PRESET_STORAGE_KEY, next);
+    applyTheme(getStored(), next, true);
     emitChange();
   }, []);
 
   // Keep DOM in sync on mount/change
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(theme, themePreset);
+  }, [theme, themePreset]);
 
-  return { theme, setTheme, resolvedTheme } as const;
+  return { theme, setTheme, themePreset, setThemePreset, resolvedTheme } as const;
 }

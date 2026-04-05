@@ -163,7 +163,13 @@ function getUiCopy(language: AppLanguage) {
       themeDescription: it
         ? "Scegli l’aspetto di T3 Code in tutta l’app."
         : "Choose how T3 Code looks across the app.",
+      themeMode: it ? "Modalità tema" : "Theme mode",
+      themePalette: it ? "Palette tema" : "Theme palette",
+      themePaletteDescription: it
+        ? "Seleziona uno stile cromatico per tutta l’interfaccia."
+        : "Select a color style for the entire interface.",
       themePreference: it ? "Preferenza tema" : "Theme preference",
+      themes: it ? "Temi" : "Themes",
       timeFormat: it ? "Formato orario" : "Time format",
       timeFormatDescription: it
         ? "L’opzione di sistema segue la preferenza dell’orologio del browser o del sistema operativo."
