@@ -12,6 +12,7 @@ import {
   InfoIcon,
   LoaderCircleIcon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
@@ -24,6 +25,7 @@ export type ThreadToastData = {
   tooltipStyle?: boolean;
   dismissAfterVisibleMs?: number;
   hideCopyButton?: boolean;
+  showCloseButton?: boolean;
 };
 
 const toastManager = Toast.createToastManager<ThreadToastData>();
@@ -54,6 +56,19 @@ function CopyErrorButton({ text }: { text: string }) {
       ) : (
         <CopyIcon className="size-3.5" />
       )}
+    </button>
+  );
+}
+
+function CloseToastButton({ toastId }: { toastId: ToastId }) {
+  return (
+    <button
+      className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-60 transition-opacity hover:opacity-100"
+      onClick={() => toastManager.close(toastId)}
+      title="Dismiss"
+      type="button"
+    >
+      <XIcon className="size-3.5" />
     </button>
   );
 }
@@ -312,9 +327,16 @@ function Toasts({ position = "top-right" }: { position: ToastPosition }) {
                         className="min-w-0 wrap-break-word font-medium"
                         data-slot="toast-title"
                       />
-                      {toast.type === "error" &&
-                        typeof toast.description === "string" &&
-                        !toast.data?.hideCopyButton && <CopyErrorButton text={toast.description} />}
+                      <div className="flex items-center gap-1">
+                        {toast.type === "error" &&
+                          typeof toast.description === "string" &&
+                          !toast.data?.hideCopyButton && (
+                            <CopyErrorButton text={toast.description} />
+                          )}
+                        {toast.data?.showCloseButton ? (
+                          <CloseToastButton toastId={toast.id} />
+                        ) : null}
+                      </div>
                     </div>
                     <Toast.Description
                       className="min-w-0 select-text wrap-break-word text-muted-foreground"
@@ -401,16 +423,21 @@ function AnchoredToasts() {
                         )}
 
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center justify-between gap-1">
                             <Toast.Title
                               className="min-w-0 wrap-break-word font-medium"
                               data-slot="toast-title"
                             />
-                            {toast.type === "error" &&
-                              typeof toast.description === "string" &&
-                              !toast.data?.hideCopyButton && (
-                                <CopyErrorButton text={toast.description} />
-                              )}
+                            <div className="flex items-center gap-1">
+                              {toast.type === "error" &&
+                                typeof toast.description === "string" &&
+                                !toast.data?.hideCopyButton && (
+                                  <CopyErrorButton text={toast.description} />
+                                )}
+                              {toast.data?.showCloseButton ? (
+                                <CloseToastButton toastId={toast.id} />
+                              ) : null}
+                            </div>
                           </div>
                           <Toast.Description
                             className="min-w-0 select-text wrap-break-word text-muted-foreground"
