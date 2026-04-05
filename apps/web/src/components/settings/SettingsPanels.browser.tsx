@@ -35,12 +35,16 @@ describe("GeneralSettingsPanel observability", () => {
     __resetNativeApiForTests();
     localStorage.clear();
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.themePreset;
+    document.documentElement.classList.remove("dark");
   });
 
   afterEach(() => {
     resetServerStateForTests();
     __resetNativeApiForTests();
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.themePreset;
+    document.documentElement.classList.remove("dark");
   });
 
   it("shows diagnostics inside About with a single logs-folder action", async () => {
@@ -87,5 +91,19 @@ describe("GeneralSettingsPanel observability", () => {
     await openLogsButton.click();
 
     expect(openInEditor).toHaveBeenCalledWith("/repo/project/.t3/logs", "cursor");
+  });
+
+  it("applies the selected theme preset from the Themes section", async () => {
+    setServerConfigSnapshot(createBaseServerConfig());
+
+    await render(
+      <AppAtomRegistryProvider>
+        <GeneralSettingsPanel />
+      </AppAtomRegistryProvider>,
+    );
+
+    await page.getByRole("button", { name: /Fuchsia/i }).click();
+
+    expect(document.documentElement.dataset.themePreset).toBe("fuchsia");
   });
 });
