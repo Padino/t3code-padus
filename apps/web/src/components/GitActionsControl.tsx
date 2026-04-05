@@ -600,7 +600,10 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
           type: "error",
           title: "Action failed",
           description: err instanceof Error ? err.message : "An error occurred.",
-          data: scopedToastData,
+          data: {
+            ...scopedToastData,
+            showCloseButton: true,
+          },
         });
       }
     },
