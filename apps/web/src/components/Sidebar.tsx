@@ -131,16 +131,8 @@ import { useSettings, useUpdateSettings } from "~/hooks/useSettings";
 import { useServerKeybindings } from "../rpc/serverState";
 import { useSidebarThreadSummaryById } from "../storeSelectors";
 import type { Project } from "../types";
+import { useTranslation } from "../i18n";
 const THREAD_PREVIEW_LIMIT = 6;
-const SIDEBAR_SORT_LABELS: Record<SidebarProjectSortOrder, string> = {
-  updated_at: "Last user message",
-  created_at: "Created at",
-  manual: "Manual",
-};
-const SIDEBAR_THREAD_SORT_LABELS: Record<SidebarThreadSortOrder, string> = {
-  updated_at: "Last user message",
-  created_at: "Created at",
-};
 const SIDEBAR_LIST_ANIMATION_OPTIONS = {
   duration: 180,
   easing: "ease-out",
@@ -150,13 +142,13 @@ type SidebarProjectSnapshot = Project & {
   expanded: boolean;
 };
 interface TerminalStatusIndicator {
-  label: "Terminal process running";
+  label: string;
   colorClass: string;
   pulse: boolean;
 }
 
 interface PrStatusIndicator {
-  label: "PR open" | "PR closed" | "PR merged";
+  label: string;
   colorClass: string;
   tooltip: string;
   url: string;
@@ -165,16 +157,28 @@ interface PrStatusIndicator {
 type ThreadPr = GitStatusResult["pr"];
 
 function ThreadStatusLabel({
+  copy,
   status,
   compact = false,
 }: {
+  copy: ReturnType<typeof useTranslation>["copy"];
   status: NonNullable<ReturnType<typeof resolveThreadStatusPill>>;
   compact?: boolean;
 }) {
+  const statusLabel =
+    {
+      awaitingInput: copy.sidebar.threadStatus.awaitingInput,
+      completed: copy.sidebar.threadStatus.completed,
+      connecting: copy.sidebar.threadStatus.connecting,
+      pendingApproval: copy.sidebar.threadStatus.pendingApproval,
+      planReady: copy.sidebar.threadStatus.planReady,
+      working: copy.sidebar.threadStatus.working,
+    }[status.label] ?? status.label;
+
   if (compact) {
     return (
       <span
-        title={status.label}
+        title={statusLabel}
         className={`inline-flex size-3.5 shrink-0 items-center justify-center ${status.colorClass}`}
       >
         <span
@@ -182,14 +186,14 @@ function ThreadStatusLabel({
             status.pulse ? "animate-pulse" : ""
           }`}
         />
-        <span className="sr-only">{status.label}</span>
+        <span className="sr-only">{statusLabel}</span>
       </span>
     );
   }
 
   return (
     <span
-      title={status.label}
+      title={statusLabel}
       className={`inline-flex items-center gap-1 text-[10px] ${status.colorClass}`}
     >
       <span
@@ -197,48 +201,52 @@ function ThreadStatusLabel({
           status.pulse ? "animate-pulse" : ""
         }`}
       />
-      <span className="hidden md:inline">{status.label}</span>
+      <span className="hidden md:inline">{statusLabel}</span>
     </span>
   );
 }
 
 function terminalStatusFromRunningIds(
+  copy: ReturnType<typeof useTranslation>["copy"],
   runningTerminalIds: string[],
 ): TerminalStatusIndicator | null {
   if (runningTerminalIds.length === 0) {
     return null;
   }
   return {
-    label: "Terminal process running",
+    label: copy.sidebar.terminalProcessRunning,
     colorClass: "text-teal-600 dark:text-teal-300/90",
     pulse: true,
   };
 }
 
-function prStatusIndicator(pr: ThreadPr): PrStatusIndicator | null {
+function prStatusIndicator(
+  pr: ThreadPr,
+  language: ReturnType<typeof useTranslation>["language"],
+): PrStatusIndicator | null {
   if (!pr) return null;
 
   if (pr.state === "open") {
     return {
-      label: "PR open",
+      label: language === "it" ? "PR aperta" : "PR open",
       colorClass: "text-emerald-600 dark:text-emerald-300/90",
-      tooltip: `#${pr.number} PR open: ${pr.title}`,
+      tooltip: `#${pr.number} ${language === "it" ? "PR aperta" : "PR open"}: ${pr.title}`,
       url: pr.url,
     };
   }
   if (pr.state === "closed") {
     return {
-      label: "PR closed",
+      label: language === "it" ? "PR chiusa" : "PR closed",
       colorClass: "text-zinc-500 dark:text-zinc-400/80",
-      tooltip: `#${pr.number} PR closed: ${pr.title}`,
+      tooltip: `#${pr.number} ${language === "it" ? "PR chiusa" : "PR closed"}: ${pr.title}`,
       url: pr.url,
     };
   }
   if (pr.state === "merged") {
     return {
-      label: "PR merged",
+      label: language === "it" ? "PR unita" : "PR merged",
       colorClass: "text-violet-600 dark:text-violet-300/90",
-      tooltip: `#${pr.number} PR merged: ${pr.title}`,
+      tooltip: `#${pr.number} ${language === "it" ? "PR unita" : "PR merged"}: ${pr.title}`,
       url: pr.url,
     };
   }
@@ -281,6 +289,7 @@ interface SidebarThreadRowProps {
 }
 
 function SidebarThreadRow(props: SidebarThreadRowProps) {
+  const { copy, language } = useTranslation();
   const thread = useSidebarThreadSummaryById(props.threadId);
   const lastVisitedAt = useUiStateStore((state) => state.threadLastVisitedAtById[props.threadId]);
   const runningTerminalIds = useTerminalStateStore(
@@ -303,8 +312,8 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
       lastVisitedAt,
     },
   });
-  const prStatus = prStatusIndicator(props.pr);
-  const terminalStatus = terminalStatusFromRunningIds(runningTerminalIds);
+  const prStatus = prStatusIndicator(props.pr, language);
+  const terminalStatus = terminalStatusFromRunningIds(copy, runningTerminalIds);
   const isConfirmingArchive = props.confirmingArchiveThreadId === thread.id && !isThreadRunning;
   const threadMetaClassName = isConfirmingArchive
     ? "pointer-events-none opacity-0"
@@ -384,7 +393,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
               <TooltipPopup side="top">{prStatus.tooltip}</TooltipPopup>
             </Tooltip>
           )}
-          {threadStatus && <ThreadStatusLabel status={threadStatus} />}
+          {threadStatus && <ThreadStatusLabel copy={copy} status={threadStatus} />}
           {props.renamingThreadId === thread.id ? (
             <input
               ref={(element) => {
@@ -444,7 +453,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                 type="button"
                 data-thread-selection-safe
                 data-testid={`thread-archive-confirm-${thread.id}`}
-                aria-label={`Confirm archive ${thread.title}`}
+                aria-label={copy.sidebar.confirmArchiveThread(thread.title)}
                 className="absolute top-1/2 right-1 inline-flex h-5 -translate-y-1/2 cursor-pointer items-center rounded-full bg-destructive/12 px-2 text-[10px] font-medium text-destructive transition-colors hover:bg-destructive/18 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-destructive/40"
                 onPointerDown={(event) => {
                   event.stopPropagation();
@@ -458,7 +467,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                   void props.attemptArchiveThread(thread.id);
                 }}
               >
-                Confirm
+                {copy.common.confirm}
               </button>
             ) : !isThreadRunning ? (
               props.appSettingsConfirmThreadArchive ? (
@@ -467,7 +476,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                     type="button"
                     data-thread-selection-safe
                     data-testid={`thread-archive-${thread.id}`}
-                    aria-label={`Archive ${thread.title}`}
+                    aria-label={`${copy.sidebar.archive} ${thread.title}`}
                     className="inline-flex size-5 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                     onPointerDown={(event) => {
                       event.stopPropagation();
@@ -477,11 +486,11 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                       event.stopPropagation();
                       props.setConfirmingArchiveThreadId(thread.id);
                       requestAnimationFrame(() => {
-                        props.confirmArchiveButtonRefs.current.get(thread.id)?.focus();
-                      });
-                    }}
-                  >
-                    <ArchiveIcon className="size-3.5" />
+                          props.confirmArchiveButtonRefs.current.get(thread.id)?.focus();
+                        });
+                      }}
+                    >
+                      <ArchiveIcon className="size-3.5" />
                   </button>
                 </div>
               ) : (
@@ -493,7 +502,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                           type="button"
                           data-thread-selection-safe
                           data-testid={`thread-archive-${thread.id}`}
-                          aria-label={`Archive ${thread.title}`}
+                          aria-label={`${copy.sidebar.archive} ${thread.title}`}
                           className="inline-flex size-5 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                           onPointerDown={(event) => {
                             event.stopPropagation();
@@ -509,7 +518,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                       </div>
                     }
                   />
-                  <TooltipPopup side="top">Archive</TooltipPopup>
+                  <TooltipPopup side="top">{copy.sidebar.archive}</TooltipPopup>
                 </Tooltip>
               )
             ) : null}
@@ -529,7 +538,7 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                       : "text-muted-foreground/40"
                   }`}
                 >
-                  {formatRelativeTimeLabel(thread.updatedAt ?? thread.createdAt)}
+                  {formatRelativeTimeLabel(thread.updatedAt ?? thread.createdAt, language)}
                 </span>
               )}
             </span>
@@ -562,16 +571,28 @@ type SortableProjectHandleProps = Pick<
 >;
 
 function ProjectSortMenu({
+  copy,
   projectSortOrder,
   threadSortOrder,
   onProjectSortOrderChange,
   onThreadSortOrderChange,
 }: {
+  copy: ReturnType<typeof useTranslation>["copy"];
   projectSortOrder: SidebarProjectSortOrder;
   threadSortOrder: SidebarThreadSortOrder;
   onProjectSortOrderChange: (sortOrder: SidebarProjectSortOrder) => void;
   onThreadSortOrderChange: (sortOrder: SidebarThreadSortOrder) => void;
 }) {
+  const projectSortLabels: Record<SidebarProjectSortOrder, string> = {
+    updated_at: copy.sidebar.lastUserMessage,
+    created_at: copy.common.createdAt,
+    manual: copy.sidebar.manual,
+  };
+  const threadSortLabels: Record<SidebarThreadSortOrder, string> = {
+    updated_at: copy.sidebar.lastUserMessage,
+    created_at: copy.common.createdAt,
+  };
+
   return (
     <Menu>
       <Tooltip>
@@ -582,12 +603,12 @@ function ProjectSortMenu({
         >
           <ArrowUpDownIcon className="size-3.5" />
         </TooltipTrigger>
-        <TooltipPopup side="right">Sort projects</TooltipPopup>
+        <TooltipPopup side="right">{copy.sidebar.sortProjects}</TooltipPopup>
       </Tooltip>
       <MenuPopup align="end" side="bottom" className="min-w-44">
         <MenuGroup>
           <div className="px-2 py-1 sm:text-xs font-medium text-muted-foreground">
-            Sort projects
+            {copy.sidebar.sortProjects}
           </div>
           <MenuRadioGroup
             value={projectSortOrder}
@@ -595,7 +616,7 @@ function ProjectSortMenu({
               onProjectSortOrderChange(value as SidebarProjectSortOrder);
             }}
           >
-            {(Object.entries(SIDEBAR_SORT_LABELS) as Array<[SidebarProjectSortOrder, string]>).map(
+            {(Object.entries(projectSortLabels) as Array<[SidebarProjectSortOrder, string]>).map(
               ([value, label]) => (
                 <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
                   {label}
@@ -606,7 +627,7 @@ function ProjectSortMenu({
         </MenuGroup>
         <MenuGroup>
           <div className="px-2 pt-2 pb-1 sm:text-xs font-medium text-muted-foreground">
-            Sort threads
+            {copy.sidebar.sortThreads}
           </div>
           <MenuRadioGroup
             value={threadSortOrder}
@@ -615,7 +636,7 @@ function ProjectSortMenu({
             }}
           >
             {(
-              Object.entries(SIDEBAR_THREAD_SORT_LABELS) as Array<[SidebarThreadSortOrder, string]>
+              Object.entries(threadSortLabels) as Array<[SidebarThreadSortOrder, string]>
             ).map(([value, label]) => (
               <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
                 {label}
@@ -666,6 +687,7 @@ function SortableProjectItem({
 }
 
 export default function Sidebar() {
+  const { copy, language } = useTranslation();
   const projects = useStore((store) => store.projects);
   const sidebarThreadsById = useStore((store) => store.sidebarThreadsById);
   const threadIdsByProjectId = useStore((store) => store.threadIdsByProjectId);
@@ -837,11 +859,12 @@ export default function Sidebar() {
       try {
         await archiveThread(threadId);
       } catch (error) {
-        toastManager.add({
-          type: "error",
-          title: "Failed to archive thread",
-          description: error instanceof Error ? error.message : "An error occurred.",
-        });
+          toastManager.add({
+            type: "error",
+            title:
+              language === "it" ? "Impossibile archiviare il thread" : "Failed to archive thread",
+            description: error instanceof Error ? error.message : "An error occurred.",
+          });
       }
     },
     [archiveThread],
@@ -914,7 +937,7 @@ export default function Sidebar() {
         if (shouldBrowseForProjectImmediately) {
           toastManager.add({
             type: "error",
-            title: "Failed to add project",
+                    title: language === "it" ? "Impossibile aggiungere il progetto" : "Failed to add project",
             description,
           });
         } else {
@@ -1010,7 +1033,7 @@ export default function Sidebar() {
       } catch (error) {
         toastManager.add({
           type: "error",
-          title: "Failed to rename thread",
+          title: language === "it" ? "Impossibile rinominare il thread" : "Failed to rename thread",
           description: error instanceof Error ? error.message : "An error occurred.",
         });
       }
@@ -1032,7 +1055,7 @@ export default function Sidebar() {
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to copy thread ID",
+        title: language === "it" ? "Impossibile copiare l’ID del thread" : "Failed to copy thread ID",
         description: error instanceof Error ? error.message : "An error occurred.",
       });
     },
@@ -1050,7 +1073,7 @@ export default function Sidebar() {
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to copy path",
+        title: language === "it" ? "Impossibile copiare il percorso" : "Failed to copy path",
         description: error instanceof Error ? error.message : "An error occurred.",
       });
     },
@@ -1241,7 +1264,7 @@ export default function Sidebar() {
 
       const clicked = await api.contextMenu.show(
         [
-          { id: "copy-path", label: "Copy Project Path" },
+          { id: "copy-path", label: language === "it" ? "Copia percorso progetto" : "Copy Project Path" },
           { id: "delete", label: "Remove project", destructive: true },
         ],
         position,
@@ -1256,7 +1279,7 @@ export default function Sidebar() {
       if (projectThreadIds.length > 0) {
         toastManager.add({
           type: "warning",
-          title: "Project is not empty",
+          title: language === "it" ? "Il progetto non è vuoto" : "Project is not empty",
           description: "Delete all threads in this project before removing it.",
         });
         return;
@@ -1281,7 +1304,10 @@ export default function Sidebar() {
         console.error("Failed to remove project", { projectId, error });
         toastManager.add({
           type: "error",
-          title: `Failed to remove "${project.name}"`,
+          title:
+            language === "it"
+              ? `Impossibile rimuovere "${project.name}"`
+              : `Failed to remove "${project.name}"`,
           description: message,
         });
       }
@@ -1694,7 +1720,11 @@ export default function Sidebar() {
               }
             />
             <TooltipPopup side="top">
-              {newThreadShortcutLabel ? `New thread (${newThreadShortcutLabel})` : "New thread"}
+              {newThreadShortcutLabel
+                ? `${language === "it" ? "Nuovo thread" : "New thread"} (${newThreadShortcutLabel})`
+                : language === "it"
+                  ? "Nuovo thread"
+                  : "New thread"}
             </TooltipPopup>
           </Tooltip>
         </div>
@@ -1757,8 +1787,10 @@ export default function Sidebar() {
                 }}
               >
                 <span className="flex min-w-0 flex-1 items-center gap-2">
-                  {hiddenThreadStatus && <ThreadStatusLabel status={hiddenThreadStatus} compact />}
-                  <span>Show more</span>
+                  {hiddenThreadStatus && (
+                    <ThreadStatusLabel copy={copy} status={hiddenThreadStatus} compact />
+                  )}
+                  <span>{language === "it" ? "Mostra altro" : "Show more"}</span>
                 </span>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
@@ -1774,7 +1806,7 @@ export default function Sidebar() {
                   collapseThreadListForProject(project.id);
                 }}
               >
-                <span>Show less</span>
+                <span>{language === "it" ? "Mostra meno" : "Show less"}</span>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           )}
@@ -1986,7 +2018,7 @@ export default function Sidebar() {
           }
         />
         <TooltipPopup side="bottom" sideOffset={2}>
-          Version {APP_VERSION}
+          {copy.common.version} {APP_VERSION}
         </TooltipPopup>
       </Tooltip>
     </div>
@@ -2011,9 +2043,11 @@ export default function Sidebar() {
           <SidebarContent className="gap-0">
             {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
               <SidebarGroup className="px-2 pt-2 pb-0">
-                <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
-                  <TriangleAlertIcon />
-                  <AlertTitle>Intel build on Apple Silicon</AlertTitle>
+                  <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
+                    <TriangleAlertIcon />
+                  <AlertTitle>
+                    {language === "it" ? "Build Intel su Apple Silicon" : "Intel build on Apple Silicon"}
+                  </AlertTitle>
                   <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
                   {desktopUpdateButtonAction !== "none" ? (
                     <AlertAction>
@@ -2024,8 +2058,12 @@ export default function Sidebar() {
                         onClick={handleDesktopUpdateButtonClick}
                       >
                         {desktopUpdateButtonAction === "download"
-                          ? "Download ARM build"
-                          : "Install ARM build"}
+                          ? language === "it"
+                            ? "Scarica build ARM"
+                            : "Download ARM build"
+                          : language === "it"
+                            ? "Installa build ARM"
+                            : "Install ARM build"}
                       </Button>
                     </AlertAction>
                   ) : null}
@@ -2035,10 +2073,11 @@ export default function Sidebar() {
             <SidebarGroup className="px-2 py-2">
               <div className="mb-1 flex items-center justify-between pl-2 pr-1.5">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                  Projects
+                  {language === "it" ? "Progetti" : "Projects"}
                 </span>
                 <div className="flex items-center gap-1">
                   <ProjectSortMenu
+                    copy={copy}
                     projectSortOrder={appSettings.sidebarProjectSortOrder}
                     threadSortOrder={appSettings.sidebarThreadSortOrder}
                     onProjectSortOrderChange={(sortOrder) => {
@@ -2054,7 +2093,13 @@ export default function Sidebar() {
                         <button
                           type="button"
                           aria-label={
-                            shouldShowProjectPathEntry ? "Cancel add project" : "Add project"
+                            shouldShowProjectPathEntry
+                              ? language === "it"
+                                ? "Annulla aggiunta progetto"
+                                : "Cancel add project"
+                              : language === "it"
+                                ? "Aggiungi progetto"
+                                : "Add project"
                           }
                           aria-pressed={shouldShowProjectPathEntry}
                           className="inline-flex size-5 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
@@ -2069,7 +2114,13 @@ export default function Sidebar() {
                       />
                     </TooltipTrigger>
                     <TooltipPopup side="right">
-                      {shouldShowProjectPathEntry ? "Cancel add project" : "Add project"}
+                      {shouldShowProjectPathEntry
+                        ? language === "it"
+                          ? "Annulla aggiunta progetto"
+                          : "Cancel add project"
+                        : language === "it"
+                          ? "Aggiungi progetto"
+                          : "Add project"}
                     </TooltipPopup>
                   </Tooltip>
                 </div>
@@ -2084,7 +2135,13 @@ export default function Sidebar() {
                       disabled={isPickingFolder || isAddingProject}
                     >
                       <FolderIcon className="size-3.5" />
-                      {isPickingFolder ? "Picking folder..." : "Browse for folder"}
+                      {isPickingFolder
+                        ? language === "it"
+                          ? "Selezione cartella..."
+                          : "Picking folder..."
+                        : language === "it"
+                          ? "Sfoglia cartelle"
+                          : "Browse for folder"}
                     </button>
                   )}
                   <div className="flex gap-1.5">
@@ -2095,7 +2152,7 @@ export default function Sidebar() {
                           ? "border-red-500/70 focus:border-red-500"
                           : "border-border focus:border-ring"
                       }`}
-                      placeholder="/path/to/project"
+                      placeholder={language === "it" ? "/percorso/del/progetto" : "/path/to/project"}
                       value={newCwd}
                       onChange={(event) => {
                         setNewCwd(event.target.value);
@@ -2116,7 +2173,11 @@ export default function Sidebar() {
                       onClick={handleAddProject}
                       disabled={!canAddProject}
                     >
-                      {isAddingProject ? "Adding..." : "Add"}
+                      {isAddingProject
+                        ? language === "it"
+                          ? "Aggiunta..."
+                          : "Adding..."
+                        : copy.common.add}
                     </button>
                   </div>
                   {addProjectError && (
@@ -2164,7 +2225,7 @@ export default function Sidebar() {
 
               {projects.length === 0 && !shouldShowProjectPathEntry && (
                 <div className="px-2 pt-4 text-center text-xs text-muted-foreground/60">
-                  No projects yet
+                  {language === "it" ? "Nessun progetto" : "No projects yet"}
                 </div>
               )}
             </SidebarGroup>
@@ -2181,7 +2242,7 @@ export default function Sidebar() {
                   onClick={() => void navigate({ to: "/settings" })}
                 >
                   <SettingsIcon className="size-3.5" />
-                  <span className="text-xs">Settings</span>
+                  <span className="text-xs">{copy.common.settings}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

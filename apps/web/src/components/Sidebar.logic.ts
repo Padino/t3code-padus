@@ -21,25 +21,19 @@ type SidebarThreadSortInput = Pick<Thread, "createdAt" | "updatedAt"> & {
 export type ThreadTraversalDirection = "previous" | "next";
 
 export interface ThreadStatusPill {
-  label:
-    | "Working"
-    | "Connecting"
-    | "Completed"
-    | "Pending Approval"
-    | "Awaiting Input"
-    | "Plan Ready";
+  label: "working" | "connecting" | "completed" | "pendingApproval" | "awaitingInput" | "planReady";
   colorClass: string;
   dotClass: string;
   pulse: boolean;
 }
 
 const THREAD_STATUS_PRIORITY: Record<ThreadStatusPill["label"], number> = {
-  "Pending Approval": 5,
-  "Awaiting Input": 4,
-  Working: 3,
-  Connecting: 3,
-  "Plan Ready": 2,
-  Completed: 1,
+  pendingApproval: 5,
+  awaitingInput: 4,
+  working: 3,
+  connecting: 3,
+  planReady: 2,
+  completed: 1,
 };
 
 type ThreadStatusInput = Pick<
@@ -315,7 +309,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.hasPendingApprovals) {
     return {
-      label: "Pending Approval",
+      label: "pendingApproval",
       colorClass: "text-amber-600 dark:text-amber-300/90",
       dotClass: "bg-amber-500 dark:bg-amber-300/90",
       pulse: false,
@@ -324,7 +318,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.hasPendingUserInput) {
     return {
-      label: "Awaiting Input",
+      label: "awaitingInput",
       colorClass: "text-indigo-600 dark:text-indigo-300/90",
       dotClass: "bg-indigo-500 dark:bg-indigo-300/90",
       pulse: false,
@@ -333,7 +327,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.session?.status === "running") {
     return {
-      label: "Working",
+      label: "working",
       colorClass: "text-sky-600 dark:text-sky-300/80",
       dotClass: "bg-sky-500 dark:bg-sky-300/80",
       pulse: true,
@@ -342,7 +336,7 @@ export function resolveThreadStatusPill(input: {
 
   if (thread.session?.status === "connecting") {
     return {
-      label: "Connecting",
+      label: "connecting",
       colorClass: "text-sky-600 dark:text-sky-300/80",
       dotClass: "bg-sky-500 dark:bg-sky-300/80",
       pulse: true,
@@ -356,7 +350,7 @@ export function resolveThreadStatusPill(input: {
     thread.hasActionableProposedPlan;
   if (hasPlanReadyPrompt) {
     return {
-      label: "Plan Ready",
+      label: "planReady",
       colorClass: "text-violet-600 dark:text-violet-300/90",
       dotClass: "bg-violet-500 dark:bg-violet-300/90",
       pulse: false,
@@ -365,7 +359,7 @@ export function resolveThreadStatusPill(input: {
 
   if (hasUnseenCompletion(thread)) {
     return {
-      label: "Completed",
+      label: "completed",
       colorClass: "text-emerald-600 dark:text-emerald-300/90",
       dotClass: "bg-emerald-500 dark:bg-emerald-300/90",
       pulse: false,

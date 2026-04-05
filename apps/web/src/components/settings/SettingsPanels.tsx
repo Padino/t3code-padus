@@ -64,53 +64,21 @@ import {
   useServerObservability,
   useServerProviders,
 } from "../../rpc/serverState";
-
-const THEME_OPTIONS = [
-  {
-    value: "system",
-    label: "System",
-  },
-  {
-    value: "light",
-    label: "Light",
-  },
-  {
-    value: "dark",
-    label: "Dark",
-  },
-] as const;
-
-const TIMESTAMP_FORMAT_LABELS = {
-  locale: "System default",
-  "12-hour": "12-hour",
-  "24-hour": "24-hour",
-} as const;
+import { APP_LANGUAGE_LABELS, useTranslation } from "../../i18n";
+import { type AppLanguage } from "@t3tools/contracts/settings";
 
 type InstallProviderSettings = {
   provider: ProviderKind;
-  title: string;
-  binaryPlaceholder: string;
-  binaryDescription: ReactNode;
   homePathKey?: "codexHomePath";
-  homePlaceholder?: string;
-  homeDescription?: ReactNode;
 };
 
 const PROVIDER_SETTINGS: readonly InstallProviderSettings[] = [
   {
     provider: "codex",
-    title: "Codex",
-    binaryPlaceholder: "Codex binary path",
-    binaryDescription: "Path to the Codex binary",
     homePathKey: "codexHomePath",
-    homePlaceholder: "CODEX_HOME",
-    homeDescription: "Optional custom Codex home and config directory.",
   },
   {
     provider: "claudeAgent",
-    title: "Claude",
-    binaryPlaceholder: "Claude binary path",
-    binaryDescription: "Path to the Claude binary",
   },
 ] as const;
 
@@ -129,55 +97,129 @@ const PROVIDER_STATUS_STYLES = {
   },
 } as const;
 
-function getProviderSummary(provider: ServerProvider | undefined) {
+function getThemeOptions(copy: ReturnType<typeof useTranslation>["copy"]) {
+  return [
+    { value: "system", label: copy.common.system },
+    { value: "light", label: copy.common.light },
+    { value: "dark", label: copy.common.dark },
+  ] as const;
+}
+
+function getTimestampFormatLabels(copy: ReturnType<typeof useTranslation>["copy"]) {
+  return {
+    locale: copy.common.system,
+    "12-hour": "12-hour",
+    "24-hour": "24-hour",
+  } as const;
+}
+
+function getProviderConfigCopy(
+  provider: ProviderKind,
+  language: AppLanguage,
+): {
+  binaryDescription: ReactNode;
+  binaryPlaceholder: string;
+  homeDescription?: ReactNode;
+  homePlaceholder?: string;
+  title: string;
+} {
+  if (provider === "codex") {
+    return {
+      title: "Codex",
+      binaryPlaceholder: language === "it" ? "Percorso binario Codex" : "Codex binary path",
+      binaryDescription:
+        language === "it" ? "Percorso del binario Codex" : "Path to the Codex binary",
+      homePlaceholder: "CODEX_HOME",
+      homeDescription:
+        language === "it"
+          ? "Directory home e configurazione personalizzata opzionale per Codex."
+          : "Optional custom Codex home and config directory.",
+    };
+  }
+
+  return {
+    title: "Claude",
+    binaryPlaceholder: language === "it" ? "Percorso binario Claude" : "Claude binary path",
+    binaryDescription:
+      language === "it" ? "Percorso del binario Claude" : "Path to the Claude binary",
+  };
+}
+
+function getProviderSummary(
+  provider: ServerProvider | undefined,
+  language: AppLanguage,
+) {
   if (!provider) {
     return {
-      headline: "Checking provider status",
-      detail: "Waiting for the server to report installation and authentication details.",
+      headline: language === "it" ? "Controllo stato provider" : "Checking provider status",
+      detail:
+        language === "it"
+          ? "In attesa che il server riporti i dettagli di installazione e autenticazione."
+          : "Waiting for the server to report installation and authentication details.",
     };
   }
   if (!provider.enabled) {
     return {
-      headline: "Disabled",
+      headline: language === "it" ? "Disabilitato" : "Disabled",
       detail:
-        provider.message ?? "This provider is installed but disabled for new sessions in T3 Code.",
+        provider.message ??
+        (language === "it"
+          ? "Questo provider è installato ma disabilitato per le nuove sessioni in T3 Code."
+          : "This provider is installed but disabled for new sessions in T3 Code."),
     };
   }
   if (!provider.installed) {
     return {
-      headline: "Not found",
-      detail: provider.message ?? "CLI not detected on PATH.",
+      headline: language === "it" ? "Non trovato" : "Not found",
+      detail:
+        provider.message ??
+        (language === "it" ? "CLI non rilevata nel PATH." : "CLI not detected on PATH."),
     };
   }
   if (provider.auth.status === "authenticated") {
     const authLabel = provider.auth.label ?? provider.auth.type;
     return {
-      headline: authLabel ? `Authenticated · ${authLabel}` : "Authenticated",
+      headline: authLabel
+        ? `${language === "it" ? "Autenticato" : "Authenticated"} · ${authLabel}`
+        : language === "it"
+          ? "Autenticato"
+          : "Authenticated",
       detail: provider.message ?? null,
     };
   }
   if (provider.auth.status === "unauthenticated") {
     return {
-      headline: "Not authenticated",
+      headline: language === "it" ? "Non autenticato" : "Not authenticated",
       detail: provider.message ?? null,
     };
   }
   if (provider.status === "warning") {
     return {
-      headline: "Needs attention",
+      headline: language === "it" ? "Richiede attenzione" : "Needs attention",
       detail:
-        provider.message ?? "The provider is installed, but the server could not fully verify it.",
+        provider.message ??
+        (language === "it"
+          ? "Il provider è installato, ma il server non è riuscito a verificarlo completamente."
+          : "The provider is installed, but the server could not fully verify it."),
     };
   }
   if (provider.status === "error") {
     return {
-      headline: "Unavailable",
-      detail: provider.message ?? "The provider failed its startup checks.",
+      headline: language === "it" ? "Non disponibile" : "Unavailable",
+      detail:
+        provider.message ??
+        (language === "it"
+          ? "Il provider non ha superato i controlli di avvio."
+          : "The provider failed its startup checks."),
     };
   }
   return {
-    headline: "Available",
-    detail: provider.message ?? "Installed and ready, but authentication could not be verified.",
+    headline: language === "it" ? "Disponibile" : "Available",
+    detail:
+      provider.message ??
+      (language === "it"
+        ? "Installato e pronto, ma l’autenticazione non è stata verificata."
+        : "Installed and ready, but authentication could not be verified."),
   };
 }
 
@@ -195,9 +237,15 @@ function useRelativeTimeTick(intervalMs = 1_000) {
   return tick;
 }
 
-function ProviderLastChecked({ lastCheckedAt }: { lastCheckedAt: string | null }) {
+function ProviderLastChecked({
+  language,
+  lastCheckedAt,
+}: {
+  language: "en" | "it";
+  lastCheckedAt: string | null;
+}) {
   useRelativeTimeTick();
-  const lastCheckedRelative = lastCheckedAt ? formatRelativeTime(lastCheckedAt) : null;
+  const lastCheckedRelative = lastCheckedAt ? formatRelativeTime(lastCheckedAt, language) : null;
 
   if (!lastCheckedRelative) {
     return null;
@@ -207,11 +255,14 @@ function ProviderLastChecked({ lastCheckedAt }: { lastCheckedAt: string | null }
     <span className="text-[11px] text-muted-foreground/60">
       {lastCheckedRelative.suffix ? (
         <>
-          Checked <span className="font-mono tabular-nums">{lastCheckedRelative.value}</span>{" "}
+          {language === "it" ? "Controllato" : "Checked"}{" "}
+          <span className="font-mono tabular-nums">{lastCheckedRelative.value}</span>{" "}
           {lastCheckedRelative.suffix}
         </>
       ) : (
-        <>Checked {lastCheckedRelative.value}</>
+        <>
+          {language === "it" ? "Controllato" : "Checked"} {lastCheckedRelative.value}
+        </>
       )}
     </span>
   );
@@ -283,7 +334,15 @@ function SettingsRow({
   );
 }
 
-function SettingResetButton({ label, onClick }: { label: string; onClick: () => void }) {
+function SettingResetButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  const { copy } = useTranslation();
+
   return (
     <Tooltip>
       <TooltipTrigger
@@ -291,7 +350,7 @@ function SettingResetButton({ label, onClick }: { label: string; onClick: () => 
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label={`Reset ${label} to default`}
+            aria-label={`${copy.common.resetToDefault}: ${label}`}
             className="size-5 rounded-sm p-0 text-muted-foreground hover:text-foreground"
             onClick={(event) => {
               event.stopPropagation();
@@ -302,7 +361,7 @@ function SettingResetButton({ label, onClick }: { label: string; onClick: () => 
           </Button>
         }
       />
-      <TooltipPopup side="top">Reset to default</TooltipPopup>
+      <TooltipPopup side="top">{copy.common.resetToDefault}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -316,15 +375,18 @@ function SettingsPageContainer({ children }: { children: ReactNode }) {
 }
 
 function AboutVersionTitle() {
+  const { copy } = useTranslation();
+
   return (
     <span className="inline-flex items-center gap-2">
-      <span>Version</span>
+      <span>{copy.common.version}</span>
       <code className="text-[11px] font-medium text-muted-foreground">{APP_VERSION}</code>
     </span>
   );
 }
 
 function AboutVersionSection() {
+  const { copy, language } = useTranslation();
   const queryClient = useQueryClient();
   const updateStateQuery = useDesktopUpdateState();
 
@@ -345,8 +407,8 @@ function AboutVersionSection() {
         .catch((error: unknown) => {
           toastManager.add({
             type: "error",
-            title: "Could not download update",
-            description: error instanceof Error ? error.message : "Download failed.",
+            title: copy.common.download,
+            description: error instanceof Error ? error.message : copy.common.download,
           });
         });
       return;
@@ -367,8 +429,8 @@ function AboutVersionSection() {
         .catch((error: unknown) => {
           toastManager.add({
             type: "error",
-            title: "Could not install update",
-            description: error instanceof Error ? error.message : "Install failed.",
+            title: copy.common.install,
+            description: error instanceof Error ? error.message : copy.common.install,
           });
         });
       return;
@@ -382,17 +444,20 @@ function AboutVersionSection() {
         if (!result.checked) {
           toastManager.add({
             type: "error",
-            title: "Could not check for updates",
+            title: copy.common.checkForUpdates,
             description:
-              result.state.message ?? "Automatic updates are not available in this build.",
+              result.state.message ??
+              (language === "it"
+                ? "Gli aggiornamenti automatici non sono disponibili in questa build."
+                : "Automatic updates are not available in this build."),
           });
         }
       })
       .catch((error: unknown) => {
         toastManager.add({
           type: "error",
-          title: "Could not check for updates",
-          description: error instanceof Error ? error.message : "Update check failed.",
+          title: copy.common.checkForUpdates,
+          description: error instanceof Error ? error.message : copy.common.checkForUpdates,
         });
       });
   }, [queryClient, updateState]);
@@ -404,18 +469,23 @@ function AboutVersionSection() {
       ? !canCheckForUpdate(updateState)
       : isDesktopUpdateButtonDisabled(updateState);
 
-  const actionLabel: Record<string, string> = { download: "Download", install: "Install" };
+  const actionLabel: Record<string, string> = {
+    download: copy.common.download,
+    install: copy.common.install,
+  };
   const statusLabel: Record<string, string> = {
-    checking: "Checking…",
-    downloading: "Downloading…",
-    "up-to-date": "Up to Date",
+    checking: copy.common.checking,
+    downloading: language === "it" ? "Download in corso..." : "Downloading...",
+    "up-to-date": copy.common.upToDate,
   };
   const buttonLabel =
-    actionLabel[action] ?? statusLabel[updateState?.status ?? ""] ?? "Check for Updates";
+    actionLabel[action] ?? statusLabel[updateState?.status ?? ""] ?? copy.common.checkForUpdates;
   const description =
     action === "download" || action === "install"
-      ? "Update available."
-      : "Current version of the application.";
+      ? language === "it"
+        ? "Aggiornamento disponibile."
+        : "Update available."
+      : copy.settings.currentAppVersion;
 
   return (
     <SettingsRow
@@ -443,6 +513,7 @@ function AboutVersionSection() {
 }
 
 export function useSettingsRestore(onRestored?: () => void) {
+  const { copy } = useTranslation();
   const { theme, setTheme } = useTheme();
   const settings = useSettings();
   const { resetSettings } = useUpdateSettings();
@@ -459,36 +530,48 @@ export function useSettingsRestore(onRestored?: () => void) {
 
   const changedSettingLabels = useMemo(
     () => [
-      ...(theme !== "system" ? ["Theme"] : []),
+      ...(theme !== "system" ? [copy.settings.theme] : []),
+      ...(settings.language !== DEFAULT_UNIFIED_SETTINGS.language ? [copy.settings.language] : []),
       ...(settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat
-        ? ["Time format"]
+        ? [copy.settings.timeFormat]
         : []),
       ...(settings.diffWordWrap !== DEFAULT_UNIFIED_SETTINGS.diffWordWrap
-        ? ["Diff line wrapping"]
+        ? [copy.settings.diffLineWrapping]
         : []),
       ...(settings.enableAssistantStreaming !== DEFAULT_UNIFIED_SETTINGS.enableAssistantStreaming
-        ? ["Assistant output"]
+        ? [copy.settings.assistantOutput]
         : []),
       ...(settings.defaultThreadEnvMode !== DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode
-        ? ["New thread mode"]
+        ? [copy.settings.newThreads]
         : []),
       ...(settings.confirmThreadArchive !== DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive
-        ? ["Archive confirmation"]
+        ? [copy.settings.archiveConfirmation]
         : []),
       ...(settings.confirmThreadDelete !== DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete
-        ? ["Delete confirmation"]
+        ? [copy.settings.deleteConfirmation]
         : []),
-      ...(isGitWritingModelDirty ? ["Git writing model"] : []),
-      ...(areProviderSettingsDirty ? ["Providers"] : []),
+      ...(isGitWritingModelDirty ? [copy.settings.textGenerationModel] : []),
+      ...(areProviderSettingsDirty ? [copy.settings.providers] : []),
     ],
     [
       areProviderSettingsDirty,
+      copy.settings.archiveConfirmation,
+      copy.settings.assistantOutput,
+      copy.settings.deleteConfirmation,
+      copy.settings.diffLineWrapping,
+      copy.settings.language,
+      copy.settings.newThreads,
+      copy.settings.providers,
+      copy.settings.textGenerationModel,
+      copy.settings.theme,
+      copy.settings.timeFormat,
       isGitWritingModelDirty,
       settings.confirmThreadArchive,
       settings.confirmThreadDelete,
       settings.defaultThreadEnvMode,
       settings.diffWordWrap,
       settings.enableAssistantStreaming,
+      settings.language,
       settings.timestampFormat,
       theme,
     ],
@@ -498,9 +581,7 @@ export function useSettingsRestore(onRestored?: () => void) {
     if (changedSettingLabels.length === 0) return;
     const api = readNativeApi();
     const confirmed = await (api ?? ensureNativeApi()).dialogs.confirm(
-      ["Restore default settings?", `This will reset: ${changedSettingLabels.join(", ")}.`].join(
-        "\n",
-      ),
+      copy.settings.restoreDefaultsConfirmation(changedSettingLabels.join(", ")),
     );
     if (!confirmed) return;
 
@@ -516,6 +597,7 @@ export function useSettingsRestore(onRestored?: () => void) {
 }
 
 export function GeneralSettingsPanel() {
+  const { copy, language } = useTranslation();
   const { theme, setTheme } = useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
@@ -548,6 +630,8 @@ export function GeneralSettingsPanel() {
     Partial<Record<ProviderKind, string | null>>
   >({});
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
+  const themeOptions = useMemo(() => getThemeOptions(copy), [copy]);
+  const timestampFormatLabels = useMemo(() => getTimestampFormatLabels(copy), [copy]);
   const refreshingRef = useRef(false);
   const modelListRefs = useRef<Partial<Record<ProviderKind, HTMLDivElement | null>>>({});
   const refreshProviders = useCallback(() => {
@@ -574,14 +658,31 @@ export function GeneralSettingsPanel() {
   const diagnosticsDescription = (() => {
     const exports: string[] = [];
     if (observability?.otlpTracesEnabled && observability.otlpTracesUrl) {
-      exports.push(`traces to ${observability.otlpTracesUrl}`);
+      exports.push(
+        language === "it"
+          ? `tracce verso ${observability.otlpTracesUrl}`
+          : `traces to ${observability.otlpTracesUrl}`,
+      );
     }
     if (observability?.otlpMetricsEnabled && observability.otlpMetricsUrl) {
-      exports.push(`metrics to ${observability.otlpMetricsUrl}`);
+      exports.push(
+        language === "it"
+          ? `metriche verso ${observability.otlpMetricsUrl}`
+          : `metrics to ${observability.otlpMetricsUrl}`,
+      );
     }
-    const mode = observability?.localTracingEnabled ? "Local trace file" : "Terminal logs only";
-    return exports.length > 0 ? `${mode}. OTLP exporting ${exports.join(" and ")}.` : `${mode}.`;
-  })();
+    const mode =
+      observability?.localTracingEnabled
+        ? language === "it"
+          ? "File di trace locale"
+          : "Local trace file"
+        : language === "it"
+          ? "Solo log del terminale"
+          : "Terminal logs only";
+    return exports.length > 0
+      ? `${mode}. ${language === "it" ? "Esportazione OTLP di" : "OTLP exporting"} ${exports.join(language === "it" ? " e " : " and ")}.`
+      : `${mode}.`;
+  }, [language, observability]);
 
   const textGenerationModelSelection = resolveAppModelSelectionState(settings, serverProviders);
   const textGenProvider = textGenerationModelSelection.provider;
@@ -608,7 +709,7 @@ export function GeneralSettingsPanel() {
       if (!editor) {
         setOpenPathErrorByTarget((existing) => ({
           ...existing,
-          [target]: "No available editors found.",
+          [target]: copy.settings.unavailableEditor,
         }));
         setOpeningPathByTarget((existing) => ({ ...existing, [target]: false }));
         return;
@@ -626,16 +727,24 @@ export function GeneralSettingsPanel() {
           setOpeningPathByTarget((existing) => ({ ...existing, [target]: false }));
         });
     },
-    [availableEditors],
+    [availableEditors, copy.settings.unavailableEditor],
   );
 
   const openKeybindingsFile = useCallback(() => {
-    openInPreferredEditor("keybindings", keybindingsConfigPath, "Unable to open keybindings file.");
-  }, [keybindingsConfigPath, openInPreferredEditor]);
+    openInPreferredEditor(
+      "keybindings",
+      keybindingsConfigPath,
+      language === "it" ? "Impossibile aprire il file delle scorciatoie." : "Unable to open keybindings file.",
+    );
+  }, [keybindingsConfigPath, language, openInPreferredEditor]);
 
   const openLogsDirectory = useCallback(() => {
-    openInPreferredEditor("logsDirectory", logsDirectoryPath, "Unable to open logs folder.");
-  }, [logsDirectoryPath, openInPreferredEditor]);
+    openInPreferredEditor(
+      "logsDirectory",
+      logsDirectoryPath,
+      language === "it" ? "Impossibile aprire la cartella dei log." : "Unable to open logs folder.",
+    );
+  }, [language, logsDirectoryPath, openInPreferredEditor]);
 
   const openKeybindingsError = openPathErrorByTarget.keybindings ?? null;
   const openDiagnosticsError = openPathErrorByTarget.logsDirectory ?? null;
@@ -650,7 +759,7 @@ export function GeneralSettingsPanel() {
       if (!normalized) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
-          [provider]: "Enter a model slug.",
+          [provider]: language === "it" ? "Inserisci uno slug modello." : "Enter a model slug.",
         }));
         return;
       }
@@ -661,21 +770,30 @@ export function GeneralSettingsPanel() {
       ) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
-          [provider]: "That model is already built in.",
+          [provider]:
+            language === "it"
+              ? "Questo modello è già incluso."
+              : "That model is already built in.",
         }));
         return;
       }
       if (normalized.length > MAX_CUSTOM_MODEL_LENGTH) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
-          [provider]: `Model slugs must be ${MAX_CUSTOM_MODEL_LENGTH} characters or less.`,
+          [provider]:
+            language === "it"
+              ? `Gli slug modello devono avere al massimo ${MAX_CUSTOM_MODEL_LENGTH} caratteri.`
+              : `Model slugs must be ${MAX_CUSTOM_MODEL_LENGTH} characters or less.`,
         }));
         return;
       }
       if (customModels.includes(normalized)) {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
-          [provider]: "That custom model is already saved.",
+          [provider]:
+            language === "it"
+              ? "Questo modello personalizzato è già salvato."
+              : "That custom model is already saved.",
         }));
         return;
       }
@@ -709,7 +827,7 @@ export function GeneralSettingsPanel() {
       observer.observe(el, { childList: true, subtree: true });
       setTimeout(() => observer.disconnect(), 2_000);
     },
-    [customModelInputByProvider, serverProviders, settings, updateSettings],
+    [customModelInputByProvider, language, serverProviders, settings, updateSettings],
   );
 
   const removeCustomModel = useCallback(
@@ -740,7 +858,8 @@ export function GeneralSettingsPanel() {
     const providerConfig = settings.providers[providerSettings.provider];
     const defaultProviderConfig = DEFAULT_UNIFIED_SETTINGS.providers[providerSettings.provider];
     const statusKey = liveProvider?.status ?? (providerConfig.enabled ? "warning" : "disabled");
-    const summary = getProviderSummary(liveProvider);
+    const providerCopy = getProviderConfigCopy(providerSettings.provider, language);
+    const summary = getProviderSummary(liveProvider, language);
     const models: ReadonlyArray<ServerProviderModel> =
       liveProvider?.models ??
       providerConfig.customModels.map((slug) => ({
@@ -752,12 +871,12 @@ export function GeneralSettingsPanel() {
 
     return {
       provider: providerSettings.provider,
-      title: providerSettings.title,
-      binaryPlaceholder: providerSettings.binaryPlaceholder,
-      binaryDescription: providerSettings.binaryDescription,
+      title: providerCopy.title,
+      binaryPlaceholder: providerCopy.binaryPlaceholder,
+      binaryDescription: providerCopy.binaryDescription,
       homePathKey: providerSettings.homePathKey,
-      homePlaceholder: providerSettings.homePlaceholder,
-      homeDescription: providerSettings.homeDescription,
+      homePlaceholder: providerCopy.homePlaceholder,
+      homeDescription: providerCopy.homeDescription,
       binaryPathValue: providerConfig.binaryPath,
       isDirty: !Equal.equals(providerConfig, defaultProviderConfig),
       liveProvider,
@@ -778,13 +897,13 @@ export function GeneralSettingsPanel() {
       : null;
   return (
     <SettingsPageContainer>
-      <SettingsSection title="General">
+      <SettingsSection title={copy.settings.general}>
         <SettingsRow
-          title="Theme"
-          description="Choose how T3 Code looks across the app."
+          title={copy.settings.theme}
+          description={copy.settings.themeDescription}
           resetAction={
             theme !== "system" ? (
-              <SettingResetButton label="theme" onClick={() => setTheme("system")} />
+              <SettingResetButton label={copy.settings.theme} onClick={() => setTheme("system")} />
             ) : null
           }
           control={
@@ -796,13 +915,13 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:w-40" aria-label="Theme preference">
+              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.themePreference}>
                 <SelectValue>
-                  {THEME_OPTIONS.find((option) => option.value === theme)?.label ?? "System"}
+                  {themeOptions.find((option) => option.value === theme)?.label ?? copy.common.system}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
-                {THEME_OPTIONS.map((option) => (
+                {themeOptions.map((option) => (
                   <SelectItem hideIndicator key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -813,12 +932,47 @@ export function GeneralSettingsPanel() {
         />
 
         <SettingsRow
-          title="Time format"
-          description="System default follows your browser or OS clock preference."
+          title={copy.settings.language}
+          description={copy.settings.languageDescription}
+          resetAction={
+            settings.language !== DEFAULT_UNIFIED_SETTINGS.language ? (
+              <SettingResetButton
+                label={copy.settings.language}
+                onClick={() => updateSettings({ language: DEFAULT_UNIFIED_SETTINGS.language })}
+              />
+            ) : null
+          }
+          control={
+            <Select
+              value={settings.language}
+              onValueChange={(value) => {
+                if (value === "en" || value === "it") {
+                  updateSettings({ language: value });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.language}>
+                <SelectValue>{APP_LANGUAGE_LABELS[settings.language]}</SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                <SelectItem hideIndicator value="en">
+                  {APP_LANGUAGE_LABELS.en}
+                </SelectItem>
+                <SelectItem hideIndicator value="it">
+                  {APP_LANGUAGE_LABELS.it}
+                </SelectItem>
+              </SelectPopup>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title={copy.settings.timeFormat}
+          description={copy.settings.timeFormatDescription}
           resetAction={
             settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat ? (
               <SettingResetButton
-                label="time format"
+                label={copy.settings.timeFormat}
                 onClick={() =>
                   updateSettings({
                     timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
@@ -836,18 +990,18 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:w-40" aria-label="Timestamp format">
-                <SelectValue>{TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}</SelectValue>
+              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.timestampFormat}>
+                <SelectValue>{timestampFormatLabels[settings.timestampFormat]}</SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 <SelectItem hideIndicator value="locale">
-                  {TIMESTAMP_FORMAT_LABELS.locale}
+                  {timestampFormatLabels.locale}
                 </SelectItem>
                 <SelectItem hideIndicator value="12-hour">
-                  {TIMESTAMP_FORMAT_LABELS["12-hour"]}
+                  {timestampFormatLabels["12-hour"]}
                 </SelectItem>
                 <SelectItem hideIndicator value="24-hour">
-                  {TIMESTAMP_FORMAT_LABELS["24-hour"]}
+                  {timestampFormatLabels["24-hour"]}
                 </SelectItem>
               </SelectPopup>
             </Select>
@@ -855,12 +1009,12 @@ export function GeneralSettingsPanel() {
         />
 
         <SettingsRow
-          title="Diff line wrapping"
-          description="Set the default wrap state when the diff panel opens."
+          title={copy.settings.diffLineWrapping}
+          description={copy.settings.diffLineWrappingDescription}
           resetAction={
             settings.diffWordWrap !== DEFAULT_UNIFIED_SETTINGS.diffWordWrap ? (
               <SettingResetButton
-                label="diff line wrapping"
+                label={copy.settings.diffLineWrapping}
                 onClick={() =>
                   updateSettings({
                     diffWordWrap: DEFAULT_UNIFIED_SETTINGS.diffWordWrap,
@@ -873,19 +1027,19 @@ export function GeneralSettingsPanel() {
             <Switch
               checked={settings.diffWordWrap}
               onCheckedChange={(checked) => updateSettings({ diffWordWrap: Boolean(checked) })}
-              aria-label="Wrap diff lines by default"
+              aria-label={copy.settings.wrappingAria}
             />
           }
         />
 
         <SettingsRow
-          title="Assistant output"
-          description="Show token-by-token output while a response is in progress."
+          title={copy.settings.assistantOutput}
+          description={copy.settings.assistantOutputDescription}
           resetAction={
             settings.enableAssistantStreaming !==
             DEFAULT_UNIFIED_SETTINGS.enableAssistantStreaming ? (
               <SettingResetButton
-                label="assistant output"
+                label={copy.settings.assistantOutput}
                 onClick={() =>
                   updateSettings({
                     enableAssistantStreaming: DEFAULT_UNIFIED_SETTINGS.enableAssistantStreaming,
@@ -900,18 +1054,18 @@ export function GeneralSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ enableAssistantStreaming: Boolean(checked) })
               }
-              aria-label="Stream assistant messages"
+              aria-label={copy.settings.assistantOutput}
             />
           }
         />
 
         <SettingsRow
-          title="New threads"
-          description="Pick the default workspace mode for newly created draft threads."
+          title={copy.settings.newThreads}
+          description={copy.settings.newThreadsDescription}
           resetAction={
             settings.defaultThreadEnvMode !== DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode ? (
               <SettingResetButton
-                label="new threads"
+                label={copy.settings.newThreads}
                 onClick={() =>
                   updateSettings({
                     defaultThreadEnvMode: DEFAULT_UNIFIED_SETTINGS.defaultThreadEnvMode,
@@ -929,17 +1083,19 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:w-44" aria-label="Default thread mode">
+              <SelectTrigger className="w-full sm:min-w-44 sm:max-w-52" aria-label={copy.settings.newThreads}>
                 <SelectValue>
-                  {settings.defaultThreadEnvMode === "worktree" ? "New worktree" : "Local"}
+                  {settings.defaultThreadEnvMode === "worktree"
+                    ? copy.common.newWorktree
+                    : copy.common.local}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 <SelectItem hideIndicator value="local">
-                  Local
+                  {copy.common.local}
                 </SelectItem>
                 <SelectItem hideIndicator value="worktree">
-                  New worktree
+                  {copy.common.newWorktree}
                 </SelectItem>
               </SelectPopup>
             </Select>
@@ -947,12 +1103,12 @@ export function GeneralSettingsPanel() {
         />
 
         <SettingsRow
-          title="Archive confirmation"
-          description="Require a second click on the inline archive action before a thread is archived."
+          title={copy.settings.archiveConfirmation}
+          description={copy.settings.archiveConfirmationDescription}
           resetAction={
             settings.confirmThreadArchive !== DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive ? (
               <SettingResetButton
-                label="archive confirmation"
+                label={copy.settings.archiveConfirmation}
                 onClick={() =>
                   updateSettings({
                     confirmThreadArchive: DEFAULT_UNIFIED_SETTINGS.confirmThreadArchive,
@@ -967,18 +1123,18 @@ export function GeneralSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ confirmThreadArchive: Boolean(checked) })
               }
-              aria-label="Confirm thread archiving"
+              aria-label={copy.settings.confirmThreadArchiving}
             />
           }
         />
 
         <SettingsRow
-          title="Delete confirmation"
-          description="Ask before deleting a thread and its chat history."
+          title={copy.settings.deleteConfirmation}
+          description={copy.settings.deleteConfirmationDescription}
           resetAction={
             settings.confirmThreadDelete !== DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete ? (
               <SettingResetButton
-                label="delete confirmation"
+                label={copy.settings.deleteConfirmation}
                 onClick={() =>
                   updateSettings({
                     confirmThreadDelete: DEFAULT_UNIFIED_SETTINGS.confirmThreadDelete,
@@ -993,18 +1149,18 @@ export function GeneralSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ confirmThreadDelete: Boolean(checked) })
               }
-              aria-label="Confirm thread deletion"
+              aria-label={copy.settings.confirmThreadDeletion}
             />
           }
         />
 
         <SettingsRow
-          title="Text generation model"
-          description="Configure the model used for generated commit messages, PR titles, and similar Git text."
+          title={copy.settings.textGenerationModel}
+          description={copy.settings.textGenerationModelDescription}
           resetAction={
             isGitWritingModelDirty ? (
               <SettingResetButton
-                label="text generation model"
+                label={copy.settings.textGenerationModel}
                 onClick={() =>
                   updateSettings({
                     textGenerationModelSelection:
@@ -1071,10 +1227,10 @@ export function GeneralSettingsPanel() {
       </SettingsSection>
 
       <SettingsSection
-        title="Providers"
+        title={copy.settings.providers}
         headerAction={
           <div className="flex items-center gap-1.5">
-            <ProviderLastChecked lastCheckedAt={lastCheckedAt} />
+            <ProviderLastChecked language={language} lastCheckedAt={lastCheckedAt} />
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -1084,7 +1240,7 @@ export function GeneralSettingsPanel() {
                     className="size-5 rounded-sm p-0 text-muted-foreground hover:text-foreground"
                     disabled={isRefreshingProviders}
                     onClick={() => void refreshProviders()}
-                    aria-label="Refresh provider status"
+                    aria-label={copy.settings.refreshProviderStatus}
                   >
                     {isRefreshingProviders ? (
                       <LoaderIcon className="size-3 animate-spin" />
@@ -1094,7 +1250,7 @@ export function GeneralSettingsPanel() {
                   </Button>
                 }
               />
-              <TooltipPopup side="top">Refresh provider status</TooltipPopup>
+              <TooltipPopup side="top">{copy.settings.refreshProviderStatus}</TooltipPopup>
             </Tooltip>
           </div>
         }
@@ -1157,7 +1313,7 @@ export function GeneralSettingsPanel() {
                           [providerCard.provider]: !existing[providerCard.provider],
                         }))
                       }
-                      aria-label={`Toggle ${providerDisplayName} details`}
+                      aria-label={`${copy.common.showDetails}: ${providerDisplayName}`}
                     >
                       <ChevronDownIcon
                         className={cn(
@@ -1188,7 +1344,7 @@ export function GeneralSettingsPanel() {
                             : {}),
                         });
                       }}
-                      aria-label={`Enable ${providerDisplayName}`}
+                      aria-label={copy.settings.enableProvider(providerDisplayName)}
                     />
                   </div>
                 </div>
@@ -1211,7 +1367,9 @@ export function GeneralSettingsPanel() {
                         className="block"
                       >
                         <span className="text-xs font-medium text-foreground">
-                          {providerDisplayName} binary path
+                          {language === "it"
+                            ? `Percorso binario ${providerDisplayName}`
+                            : `${providerDisplayName} binary path`}
                         </span>
                         <Input
                           id={`provider-install-${providerCard.provider}-binary-path`}
@@ -1244,7 +1402,7 @@ export function GeneralSettingsPanel() {
                           className="block"
                         >
                           <span className="text-xs font-medium text-foreground">
-                            CODEX_HOME path
+                            {language === "it" ? "Percorso CODEX_HOME" : "CODEX_HOME path"}
                           </span>
                           <Input
                             id={`provider-install-${providerCard.homePathKey}`}
@@ -1274,10 +1432,11 @@ export function GeneralSettingsPanel() {
                     ) : null}
 
                     <div className="border-t border-border/60 px-4 py-3 sm:px-5">
-                      <div className="text-xs font-medium text-foreground">Models</div>
+                      <div className="text-xs font-medium text-foreground">{copy.settings.models}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        {providerCard.models.length} model
-                        {providerCard.models.length === 1 ? "" : "s"} available.
+                        {language === "it"
+                          ? `${providerCard.models.length} modell${providerCard.models.length === 1 ? "o disponibile" : "i disponibili"}.`
+                          : `${providerCard.models.length} model${providerCard.models.length === 1 ? "" : "s"} available.`}
                       </div>
                       <div
                         ref={(el) => {
@@ -1288,13 +1447,15 @@ export function GeneralSettingsPanel() {
                         {providerCard.models.map((model) => {
                           const caps = model.capabilities;
                           const capLabels: string[] = [];
-                          if (caps?.supportsFastMode) capLabels.push("Fast mode");
-                          if (caps?.supportsThinkingToggle) capLabels.push("Thinking");
+                          if (caps?.supportsFastMode)
+                            capLabels.push(language === "it" ? "Modalità veloce" : "Fast mode");
+                          if (caps?.supportsThinkingToggle)
+                            capLabels.push(language === "it" ? "Riflessione" : "Thinking");
                           if (
                             caps?.reasoningEffortLevels &&
                             caps.reasoningEffortLevels.length > 0
                           ) {
-                            capLabels.push("Reasoning");
+                            capLabels.push(language === "it" ? "Ragionamento" : "Reasoning");
                           }
                           const hasDetails = capLabels.length > 0 || model.name !== model.slug;
 
@@ -1313,7 +1474,11 @@ export function GeneralSettingsPanel() {
                                       <button
                                         type="button"
                                         className="shrink-0 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
-                                        aria-label={`Details for ${model.name}`}
+                                        aria-label={
+                                          language === "it"
+                                            ? `Dettagli per ${model.name}`
+                                            : `Details for ${model.name}`
+                                        }
                                       />
                                     }
                                   >
@@ -1342,11 +1507,17 @@ export function GeneralSettingsPanel() {
                               ) : null}
                               {model.isCustom ? (
                                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                                  <span className="text-[10px] text-muted-foreground">custom</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {language === "it" ? "personalizzato" : "custom"}
+                                  </span>
                                   <button
                                     type="button"
                                     className="text-muted-foreground transition-colors hover:text-foreground"
-                                    aria-label={`Remove ${model.slug}`}
+                                    aria-label={
+                                      language === "it"
+                                        ? `Rimuovi ${model.slug}`
+                                        : `Remove ${model.slug}`
+                                    }
                                     onClick={() =>
                                       removeCustomModel(providerCard.provider, model.slug)
                                     }
@@ -1395,7 +1566,7 @@ export function GeneralSettingsPanel() {
                           onClick={() => addCustomModel(providerCard.provider)}
                         >
                           <PlusIcon className="size-3.5" />
-                          Add
+                          {copy.common.add}
                         </Button>
                       </div>
 
@@ -1411,19 +1582,22 @@ export function GeneralSettingsPanel() {
         })}
       </SettingsSection>
 
-      <SettingsSection title="Advanced">
+      <SettingsSection title={copy.settings.advanced}>
         <SettingsRow
-          title="Keybindings"
-          description="Open the persisted `keybindings.json` file to edit advanced bindings directly."
+          title={copy.settings.keybindings}
+          description={copy.settings.keybindingsDescription}
           status={
             <>
               <span className="block break-all font-mono text-[11px] text-foreground">
-                {keybindingsConfigPath ?? "Resolving keybindings path..."}
+                {keybindingsConfigPath ??
+                  (language === "it"
+                    ? "Risoluzione percorso scorciatoie..."
+                    : "Resolving keybindings path...")}
               </span>
               {openKeybindingsError ? (
                 <span className="mt-1 block text-destructive">{openKeybindingsError}</span>
               ) : (
-                <span className="mt-1 block">Opens in your preferred editor.</span>
+                <span className="mt-1 block">{copy.settings.openPreferredEditor}</span>
               )}
             </>
           }
@@ -1434,28 +1608,31 @@ export function GeneralSettingsPanel() {
               disabled={!keybindingsConfigPath || isOpeningKeybindings}
               onClick={openKeybindingsFile}
             >
-              {isOpeningKeybindings ? "Opening..." : "Open file"}
+              {isOpeningKeybindings ? copy.common.opening : copy.common.openFile}
             </Button>
           }
         />
       </SettingsSection>
 
-      <SettingsSection title="About">
+      <SettingsSection title={copy.settings.about}>
         {isElectron ? (
           <AboutVersionSection />
         ) : (
           <SettingsRow
             title={<AboutVersionTitle />}
-            description="Current version of the application."
+            description={copy.settings.currentAppVersion}
           />
         )}
         <SettingsRow
-          title="Diagnostics"
+          title={copy.settings.diagnostics}
           description={diagnosticsDescription}
           status={
             <>
               <span className="block break-all font-mono text-[11px] text-foreground">
-                {logsDirectoryPath ?? "Resolving logs directory..."}
+                {logsDirectoryPath ??
+                  (language === "it"
+                    ? "Risoluzione cartella log..."
+                    : "Resolving logs directory...")}
               </span>
               {openDiagnosticsError ? (
                 <span className="mt-1 block text-destructive">{openDiagnosticsError}</span>
@@ -1469,7 +1646,7 @@ export function GeneralSettingsPanel() {
               disabled={!logsDirectoryPath || isOpeningLogsDirectory}
               onClick={openLogsDirectory}
             >
-              {isOpeningLogsDirectory ? "Opening..." : "Open logs folder"}
+              {isOpeningLogsDirectory ? copy.common.opening : copy.settings.openLogsFolder}
             </Button>
           }
         />
@@ -1479,6 +1656,7 @@ export function GeneralSettingsPanel() {
 }
 
 export function ArchivedThreadsPanel() {
+  const { copy, language } = useTranslation();
   const projects = useStore((store) => store.projects);
   const threads = useStore((store) => store.threads);
   const { unarchiveThread, confirmAndDeleteThread } = useThreadActions();
@@ -1504,8 +1682,8 @@ export function ArchivedThreadsPanel() {
       if (!api) return;
       const clicked = await api.contextMenu.show(
         [
-          { id: "unarchive", label: "Unarchive" },
-          { id: "delete", label: "Delete", destructive: true },
+          { id: "unarchive", label: copy.settings.unarchive },
+          { id: "delete", label: copy.common.delete, destructive: true },
         ],
         position,
       );
@@ -1516,8 +1694,14 @@ export function ArchivedThreadsPanel() {
         } catch (error) {
           toastManager.add({
             type: "error",
-            title: "Failed to unarchive thread",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title:
+              language === "it" ? "Impossibile ripristinare il thread" : "Failed to unarchive thread",
+            description:
+              error instanceof Error
+                ? error.message
+                : language === "it"
+                  ? "Si è verificato un errore."
+                  : "An error occurred.",
           });
         }
         return;
@@ -1533,14 +1717,14 @@ export function ArchivedThreadsPanel() {
   return (
     <SettingsPageContainer>
       {archivedGroups.length === 0 ? (
-        <SettingsSection title="Archived threads">
+        <SettingsSection title={copy.settings.archivedThreads}>
           <Empty className="min-h-88">
             <EmptyMedia variant="icon">
               <ArchiveIcon />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle>No archived threads</EmptyTitle>
-              <EmptyDescription>Archived threads will appear here.</EmptyDescription>
+              <EmptyTitle>{copy.settings.archivedThreadsEmptyTitle}</EmptyTitle>
+              <EmptyDescription>{copy.settings.archivedThreadsEmptyDescription}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         </SettingsSection>
@@ -1566,9 +1750,11 @@ export function ArchivedThreadsPanel() {
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-sm font-medium text-foreground">{thread.title}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Archived {formatRelativeTimeLabel(thread.archivedAt ?? thread.createdAt)}
-                    {" \u00b7 Created "}
-                    {formatRelativeTimeLabel(thread.createdAt)}
+                    {language === "it" ? "Archiviato" : "Archived"}{" "}
+                    {formatRelativeTimeLabel(thread.archivedAt ?? thread.createdAt, language)}
+                    {" \u00b7 "}
+                    {copy.common.createdAt}{" "}
+                    {formatRelativeTimeLabel(thread.createdAt, language)}
                   </p>
                 </div>
                 <Button
@@ -1580,14 +1766,22 @@ export function ArchivedThreadsPanel() {
                     void unarchiveThread(thread.id).catch((error) => {
                       toastManager.add({
                         type: "error",
-                        title: "Failed to unarchive thread",
-                        description: error instanceof Error ? error.message : "An error occurred.",
+                        title:
+                          language === "it"
+                            ? "Impossibile ripristinare il thread"
+                            : "Failed to unarchive thread",
+                        description:
+                          error instanceof Error
+                            ? error.message
+                            : language === "it"
+                              ? "Si è verificato un errore."
+                              : "An error occurred.",
                       });
                     })
                   }
                 >
                   <ArchiveX className="size-3.5" />
-                  <span>Unarchive</span>
+                  <span>{copy.settings.unarchive}</span>
                 </Button>
               </div>
             ))}

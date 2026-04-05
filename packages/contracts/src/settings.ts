@@ -15,6 +15,10 @@ export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"])
 export type TimestampFormat = typeof TimestampFormat.Type;
 export const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = "locale";
 
+export const AppLanguage = Schema.Literals(["en", "it"]);
+export type AppLanguage = typeof AppLanguage.Type;
+export const DEFAULT_APP_LANGUAGE: AppLanguage = "en";
+
 export const SidebarProjectSortOrder = Schema.Literals(["updated_at", "created_at", "manual"]);
 export type SidebarProjectSortOrder = typeof SidebarProjectSortOrder.Type;
 export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "updated_at";
@@ -27,6 +31,7 @@ export const ClientSettingsSchema = Schema.Struct({
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   confirmThreadDelete: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   diffWordWrap: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
+  language: AppLanguage.pipe(Schema.withDecodingDefault(() => DEFAULT_APP_LANGUAGE)),
   sidebarProjectSortOrder: SidebarProjectSortOrder.pipe(
     Schema.withDecodingDefault(() => DEFAULT_SIDEBAR_PROJECT_SORT_ORDER),
   ),

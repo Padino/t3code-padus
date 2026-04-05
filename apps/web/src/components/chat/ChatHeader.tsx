@@ -13,6 +13,7 @@ import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScr
 import { Toggle } from "../ui/toggle";
 import { SidebarTrigger } from "../ui/sidebar";
 import { OpenInPicker } from "./OpenInPicker";
+import { useTranslation } from "../../i18n";
 
 interface ChatHeaderProps {
   activeThreadId: ThreadId;
@@ -61,6 +62,8 @@ export const ChatHeader = memo(function ChatHeader({
   onToggleTerminal,
   onToggleDiff,
 }: ChatHeaderProps) {
+  const { copy } = useTranslation();
+
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
@@ -78,7 +81,7 @@ export const ChatHeader = memo(function ChatHeader({
         )}
         {activeProjectName && !isGitRepo && (
           <Badge variant="outline" className="shrink-0 text-[10px] text-amber-700">
-            No Git
+            {copy.chatHeader.noGit}
           </Badge>
         )}
       </div>
@@ -109,7 +112,7 @@ export const ChatHeader = memo(function ChatHeader({
                 className="shrink-0"
                 pressed={terminalOpen}
                 onPressedChange={onToggleTerminal}
-                aria-label="Toggle terminal drawer"
+                aria-label={copy.chatHeader.toggleTerminalDrawer}
                 variant="outline"
                 size="xs"
                 disabled={!terminalAvailable}
@@ -120,10 +123,10 @@ export const ChatHeader = memo(function ChatHeader({
           />
           <TooltipPopup side="bottom">
             {!terminalAvailable
-              ? "Terminal is unavailable until this thread has an active project."
+              ? copy.chatHeader.terminalUnavailable
               : terminalToggleShortcutLabel
-                ? `Toggle terminal drawer (${terminalToggleShortcutLabel})`
-                : "Toggle terminal drawer"}
+                ? `${copy.chatHeader.toggleTerminalDrawer} (${terminalToggleShortcutLabel})`
+                : copy.chatHeader.toggleTerminalDrawer}
           </TooltipPopup>
         </Tooltip>
         <Tooltip>
@@ -133,7 +136,7 @@ export const ChatHeader = memo(function ChatHeader({
                 className="shrink-0"
                 pressed={diffOpen}
                 onPressedChange={onToggleDiff}
-                aria-label="Toggle diff panel"
+                aria-label={copy.chatHeader.toggleDiffPanel}
                 variant="outline"
                 size="xs"
                 disabled={!isGitRepo}
@@ -144,10 +147,10 @@ export const ChatHeader = memo(function ChatHeader({
           />
           <TooltipPopup side="bottom">
             {!isGitRepo
-              ? "Diff panel is unavailable because this project is not a git repository."
+              ? copy.chatHeader.diffUnavailable
               : diffToggleShortcutLabel
-                ? `Toggle diff panel (${diffToggleShortcutLabel})`
-                : "Toggle diff panel"}
+                ? `${copy.chatHeader.toggleDiffPanel} (${diffToggleShortcutLabel})`
+                : copy.chatHeader.toggleDiffPanel}
           </TooltipPopup>
         </Tooltip>
       </div>

@@ -13,11 +13,7 @@ import {
 } from "./BranchToolbar.logic";
 import { BranchToolbarBranchSelector } from "./BranchToolbarBranchSelector";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "./ui/select";
-
-const envModeItems = [
-  { value: "local", label: "Local" },
-  { value: "worktree", label: "New worktree" },
-] as const;
+import { useTranslation } from "../i18n";
 
 interface BranchToolbarProps {
   threadId: ThreadId;
@@ -34,6 +30,7 @@ export default function BranchToolbar({
   onCheckoutPullRequestRequest,
   onComposerFocusRequest,
 }: BranchToolbarProps) {
+  const { copy } = useTranslation();
   const threads = useStore((store) => store.threads);
   const projects = useStore((store) => store.projects);
   const setThreadBranchAction = useStore((store) => store.setThreadBranch);
@@ -108,6 +105,11 @@ export default function BranchToolbar({
 
   if (!activeThreadId || !activeProject) return null;
 
+  const envModeItems = [
+    { value: "local", label: copy.common.local },
+    { value: "worktree", label: copy.common.newWorktree },
+  ] as const;
+
   return (
     <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 pb-3 pt-1">
       {envLocked || activeWorktreePath ? (
@@ -115,12 +117,12 @@ export default function BranchToolbar({
           {activeWorktreePath ? (
             <>
               <GitForkIcon className="size-3" />
-              Worktree
+              {copy.branchToolbar.worktree}
             </>
           ) : (
             <>
               <FolderIcon className="size-3" />
-              Local
+              {copy.common.local}
             </>
           )}
         </span>
@@ -142,13 +144,13 @@ export default function BranchToolbar({
             <SelectItem value="local">
               <span className="inline-flex items-center gap-1.5">
                 <FolderIcon className="size-3" />
-                Local
+                {copy.common.local}
               </span>
             </SelectItem>
             <SelectItem value="worktree">
               <span className="inline-flex items-center gap-1.5">
                 <GitForkIcon className="size-3" />
-                New worktree
+                {copy.common.newWorktree}
               </span>
             </SelectItem>
           </SelectPopup>

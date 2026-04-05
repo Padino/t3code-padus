@@ -34,6 +34,7 @@ import { useSettings } from "../hooks/useSettings";
 import { formatShortTimestamp } from "../timestampFormat";
 import { DiffPanelLoadingState, DiffPanelShell, type DiffPanelMode } from "./DiffPanelShell";
 import { ToggleGroup, Toggle } from "./ui/toggle-group";
+import { useTranslation } from "../i18n";
 
 type DiffRenderMode = "stacked" | "split";
 type DiffThemeType = "light" | "dark";
@@ -165,6 +166,7 @@ export { DiffWorkerPoolProvider } from "./DiffWorkerPoolProvider";
 
 export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
   const navigate = useNavigate();
+  const { copy, language } = useTranslation();
   const { resolvedTheme } = useTheme();
   const settings = useSettings();
   const [diffRenderMode, setDiffRenderMode] = useState<DiffRenderMode>("stacked");
@@ -498,7 +500,7 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
                       "?"}
                   </span>
                   <span className="text-[9px] leading-tight opacity-70">
-                    {formatShortTimestamp(summary.completedAt, settings.timestampFormat)}
+                    {formatShortTimestamp(summary.completedAt, settings.timestampFormat, language)}
                   </span>
                 </div>
               </div>
@@ -519,16 +521,24 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
             }
           }}
         >
-          <Toggle aria-label="Stacked diff view" value="stacked">
+          <Toggle
+            aria-label={language === "it" ? "Vista diff sovrapposta" : "Stacked diff view"}
+            value="stacked"
+          >
             <Rows3Icon className="size-3" />
           </Toggle>
-          <Toggle aria-label="Split diff view" value="split">
+          <Toggle
+            aria-label={language === "it" ? "Vista diff affiancata" : "Split diff view"}
+            value="split"
+          >
             <Columns2Icon className="size-3" />
           </Toggle>
         </ToggleGroup>
         <Toggle
-          aria-label={diffWordWrap ? "Disable diff line wrapping" : "Enable diff line wrapping"}
-          title={diffWordWrap ? "Disable line wrapping" : "Enable line wrapping"}
+          aria-label={
+            diffWordWrap ? copy.diff.disableLineWrappingAria : copy.diff.enableLineWrappingAria
+          }
+          title={diffWordWrap ? copy.diff.disableLineWrapping : copy.diff.enableLineWrapping}
           variant="outline"
           size="xs"
           pressed={diffWordWrap}
@@ -546,11 +556,15 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
     <DiffPanelShell mode={mode} header={headerRow}>
       {!activeThread ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-          Select a thread to inspect turn diffs.
+          {language === "it"
+            ? "Seleziona un thread per ispezionare i diff dei turni."
+            : "Select a thread to inspect turn diffs."}
         </div>
       ) : !isGitRepo ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
-          Turn diffs are unavailable because this project is not a git repository.
+          {language === "it"
+            ? "I diff dei turni non sono disponibili perché questo progetto non è un repository Git."
+            : "Turn diffs are unavailable because this project is not a git repository."}
         </div>
       ) : orderedTurnDiffSummaries.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">

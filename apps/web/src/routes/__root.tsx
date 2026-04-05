@@ -49,6 +49,7 @@ import { deriveOrchestrationBatchEffects } from "../orchestrationEventEffects";
 import { createOrchestrationRecoveryCoordinator } from "../orchestrationRecovery";
 import { deriveReplayRetryDecision } from "../orchestrationRecovery";
 import { getWsRpcClient } from "~/wsRpcClient";
+import { useTranslation } from "../i18n";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -61,13 +62,13 @@ export const Route = createRootRouteWithContext<{
 });
 
 function RootRouteView() {
+  const { copy } = useTranslation();
+
   if (!readNativeApi()) {
     return (
       <div className="flex h-screen flex-col bg-background text-foreground">
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            Connecting to {APP_DISPLAY_NAME} server...
-          </p>
+          <p className="text-sm text-muted-foreground">{copy.root.connectingToServer}</p>
         </div>
       </div>
     );
@@ -91,8 +92,9 @@ function RootRouteView() {
 }
 
 function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
-  const message = errorMessage(error);
-  const details = errorDetails(error);
+  const { copy } = useTranslation();
+  const message = errorMessage(error, copy.root.unexpectedRouterError);
+  const details = errorDetails(error, copy.root.noAdditionalErrorDetails);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6">
@@ -106,23 +108,23 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
           {APP_DISPLAY_NAME}
         </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-          Something went wrong.
+          {copy.root.somethingWentWrong}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <Button size="sm" onClick={() => reset()}>
-            Try again
+            {copy.root.tryAgain}
           </Button>
           <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-            Reload app
+            {copy.common.reloadApp}
           </Button>
         </div>
 
         <details className="group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground">
-            <span className="group-open:hidden">Show error details</span>
-            <span className="hidden group-open:inline">Hide error details</span>
+            <span className="group-open:hidden">{copy.common.showDetails}</span>
+            <span className="hidden group-open:inline">{copy.common.hideDetails}</span>
           </summary>
           <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
             {details}
@@ -133,7 +135,7 @@ function RootRouteErrorView({ error, reset }: ErrorComponentProps) {
   );
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
@@ -142,10 +144,10 @@ function errorMessage(error: unknown): string {
     return error;
   }
 
-  return "An unexpected router error occurred.";
+  return fallbackMessage;
 }
 
-function errorDetails(error: unknown): string {
+function errorDetails(error: unknown, fallbackMessage: string): string {
   if (error instanceof Error) {
     return error.stack ?? error.message;
   }
@@ -157,7 +159,7 @@ function errorDetails(error: unknown): string {
   try {
     return JSON.stringify(error, null, 2);
   } catch {
-    return "No additional error details are available.";
+    return fallbackMessage;
   }
 }
 

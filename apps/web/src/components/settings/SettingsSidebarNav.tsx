@@ -11,20 +11,22 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "../ui/sidebar";
+import { useTranslation } from "../../i18n";
 
 export type SettingsSectionPath = "/settings/general" | "/settings/archived";
 
 export const SETTINGS_NAV_ITEMS: ReadonlyArray<{
-  label: string;
+  labelKey: "general" | "archived";
   to: SettingsSectionPath;
   icon: ComponentType<{ className?: string }>;
 }> = [
-  { label: "General", to: "/settings/general", icon: Settings2Icon },
-  { label: "Archive", to: "/settings/archived", icon: ArchiveIcon },
+  { labelKey: "general", to: "/settings/general", icon: Settings2Icon },
+  { labelKey: "archived", to: "/settings/archived", icon: ArchiveIcon },
 ];
 
 export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   const navigate = useNavigate();
+  const { copy } = useTranslation();
 
   return (
     <>
@@ -34,6 +36,8 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
             {SETTINGS_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.to;
+              const label =
+                item.labelKey === "general" ? copy.settingsNav.general : copy.settingsNav.archived;
               return (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton
@@ -53,7 +57,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
                           : "size-4 shrink-0 text-muted-foreground"
                       }
                     />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -72,7 +76,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
               onClick={() => window.history.back()}
             >
               <ArrowLeftIcon className="size-4" />
-              <span>Back</span>
+              <span>{copy.common.back}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

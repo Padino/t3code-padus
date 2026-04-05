@@ -17,6 +17,7 @@ import {
   stripDiffSearchParams,
 } from "../diffRouteSearch";
 import { useMediaQuery } from "../hooks/useMediaQuery";
+import { useTranslation } from "../i18n";
 import { useStore } from "../store";
 import { Sheet, SheetPopup } from "../components/ui/sheet";
 import { Sidebar, SidebarInset, SidebarProvider, SidebarRail } from "~/components/ui/sidebar";
@@ -55,9 +56,11 @@ const DiffPanelSheet = (props: {
 };
 
 const DiffLoadingFallback = (props: { mode: DiffPanelMode }) => {
+  const { copy } = useTranslation();
+
   return (
     <DiffPanelShell mode={props.mode} header={<DiffPanelHeaderSkeleton />}>
-      <DiffPanelLoadingState label="Loading diff viewer..." />
+      <DiffPanelLoadingState label={copy.diff.loadingDiffViewer} />
     </DiffPanelShell>
   );
 };

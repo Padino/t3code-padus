@@ -17,6 +17,7 @@ import {
 import { Button } from "./ui/button";
 import { toastManager } from "./ui/toast";
 import { getWsRpcClient } from "~/wsRpcClient";
+import { useTranslation } from "../i18n";
 
 const FORCED_WS_RECONNECT_DEBOUNCE_MS = 5_000;
 type WsAutoReconnectTrigger = "focus" | "online";
@@ -42,8 +43,8 @@ function formatRetryCountdown(nextRetryAt: string, nowMs: number): string {
   return `${Math.max(1, Math.ceil(remainingMs / 1000))}s`;
 }
 
-function describeOfflineToast(): string {
-  return "WebSocket disconnected. Waiting for network.";
+function describeOfflineToast(copy: ReturnType<typeof useTranslation>["copy"]): string {
+  return copy.connection.offlineToast;
 }
 
 function formatReconnectAttemptLabel(status: WsConnectionStatus): string {
@@ -54,19 +55,12 @@ function formatReconnectAttemptLabel(status: WsConnectionStatus): string {
   return `Attempt ${reconnectAttempt}/${status.reconnectMaxAttempts}`;
 }
 
-function describeExhaustedToast(): string {
-  return "Retries exhausted trying to reconnect";
-}
-
-function buildReconnectTitle(status: WsConnectionStatus): string {
-  if (status.nextRetryAt === null) {
-    return "Disconnected from T3 Server";
-  }
-
-  return "Disconnected from T3 Server";
+function describeExhaustedToast(copy: ReturnType<typeof useTranslation>["copy"]): string {
+  return copy.connection.exhaustedRetries;
 }
 
 function describeRecoveredToast(
+  copy: ReturnType<typeof useTranslation>["copy"],
   previousDisconnectedAt: string | null,
   connectedAt: string | null,
 ): string {
@@ -74,21 +68,24 @@ function describeRecoveredToast(
   const disconnectedAtLabel = formatConnectionMoment(previousDisconnectedAt);
 
   if (disconnectedAtLabel && reconnectedAtLabel) {
-    return `Disconnected at ${disconnectedAtLabel} and reconnected at ${reconnectedAtLabel}.`;
+    return copy.connection.disconnectedAtAndReconnectedAt(disconnectedAtLabel, reconnectedAtLabel);
   }
 
   if (reconnectedAtLabel) {
-    return `Connection restored at ${reconnectedAtLabel}.`;
+    return copy.connection.connectionRestoredAt(reconnectedAtLabel);
   }
 
-  return "Connection restored.";
+  return copy.connection.connectionRestored;
 }
 
-function describeSlowRpcAckToast(requests: ReadonlyArray<SlowRpcAckRequest>): ReactNode {
+function describeSlowRpcAckToast(
+  copy: ReturnType<typeof useTranslation>["copy"],
+  requests: ReadonlyArray<SlowRpcAckRequest>,
+): ReactNode {
   const count = requests.length;
   const thresholdSeconds = Math.round((requests[0]?.thresholdMs ?? 0) / 1000);
 
-  return `${count} request${count === 1 ? "" : "s"} waiting longer than ${thresholdSeconds}s.`;
+  return copy.connection.slowRequests(count, thresholdSeconds);
 }
 
 export function shouldAutoReconnect(
@@ -114,6 +111,8 @@ export function shouldAutoReconnect(
 }
 
 function buildBlockingCopy(
+  copy: ReturnType<typeof useTranslation>["copy"],
+  language: ReturnType<typeof useTranslation>["language"],
   uiState: WsConnectionUiState,
   status: WsConnectionStatus,
 ): {
@@ -123,34 +122,38 @@ function buildBlockingCopy(
 } {
   if (uiState === "connecting") {
     return {
-      description: `Opening the WebSocket connection to the ${APP_DISPLAY_NAME} server and waiting for the initial config snapshot.`,
-      eyebrow: "Starting Session",
-      title: `Connecting to ${APP_DISPLAY_NAME}`,
+      description: copy.connection.startingDescription,
+      eyebrow: copy.connection.sessionStart,
+      title: `${copy.common.connecting} ${APP_DISPLAY_NAME}`,
     };
   }
 
   if (uiState === "offline") {
     return {
-      description:
-        "Your browser is offline, so the web client cannot reach the T3 server. Reconnect to the network and the app will retry automatically.",
-      eyebrow: "Offline",
-      title: "WebSocket connection unavailable",
+      description: copy.connection.offlineDescription,
+      eyebrow: copy.connection.offline,
+      title: copy.connection.websocketConnectionUnavailable,
     };
   }
 
   if (status.lastError?.trim()) {
     return {
-      description: `${status.lastError} Verify that the T3 server is running and reachable, then reload the app if needed.`,
-      eyebrow: "Connection Error",
-      title: "Cannot reach the T3 server",
+      description:
+        language === "it"
+          ? `${status.lastError} Verifica che il server T3 sia in esecuzione e raggiungibile, poi ricarica l’app se necessario.`
+          : `${status.lastError} Verify that the T3 server is running and reachable, then reload the app if needed.`,
+      eyebrow: copy.connection.connection,
+      title: copy.connection.cannotReachServer,
     };
   }
 
   return {
     description:
-      "The web client could not complete its initial WebSocket connection to the T3 server. It will keep retrying in the background.",
-    eyebrow: "Connection Error",
-    title: "Cannot reach the T3 server",
+      language === "it"
+        ? "Il client web non è riuscito a completare la connessione WebSocket iniziale con il server T3. Continuerà a riprovare in background."
+        : "The web client could not complete its initial WebSocket connection to the T3 server. It will keep retrying in the background.",
+    eyebrow: copy.connection.connection,
+    title: copy.connection.cannotReachServer,
   };
 }
 
@@ -193,7 +196,8 @@ function WebSocketBlockingState({
   readonly status: WsConnectionStatus;
   readonly uiState: WsConnectionUiState;
 }) {
-  const copy = buildBlockingCopy(uiState, status);
+  const { copy, language } = useTranslation();
+  const blockingCopy = buildBlockingCopy(copy, language, uiState, status);
   const disconnectedAt = formatConnectionMoment(status.disconnectedAt ?? status.lastErrorAt);
   const Icon =
     uiState === "connecting" ? LoaderCircle : uiState === "offline" ? CloudOff : AlertTriangle;
@@ -209,49 +213,55 @@ function WebSocketBlockingState({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              {copy.eyebrow}
+              {blockingCopy.eyebrow}
             </p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{copy.title}</h1>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {blockingCopy.title}
+            </h1>
           </div>
           <div className="rounded-2xl border border-border/70 bg-background/80 p-3 text-foreground shadow-sm">
             <Icon className={uiState === "connecting" ? "size-5 animate-spin" : "size-5"} />
           </div>
         </div>
 
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{copy.description}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {blockingCopy.description}
+        </p>
 
         <div className="mt-5 grid gap-3 rounded-2xl border border-border/70 bg-background/60 p-4 text-sm sm:grid-cols-2">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-              Connection
+              {copy.connection.connection}
             </p>
             <p className="mt-1 font-medium text-foreground">
               {uiState === "connecting"
-                ? "Opening WebSocket"
+                ? copy.connection.openingWebsocket
                 : uiState === "offline"
-                  ? "Waiting for network"
-                  : "Retrying server connection"}
+                  ? copy.connection.waitingForNetwork
+                  : copy.connection.retryingServerConnection}
             </p>
           </div>
           <div>
             <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-              Latest Event
+              {copy.connection.latestEvent}
             </p>
-            <p className="mt-1 font-medium text-foreground">{disconnectedAt ?? "Pending"}</p>
+            <p className="mt-1 font-medium text-foreground">
+              {disconnectedAt ?? copy.connection.pending}
+            </p>
           </div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
           <Button size="sm" onClick={() => window.location.reload()}>
             <RotateCw />
-            Reload app
+            {copy.common.reloadApp}
           </Button>
         </div>
 
         <details className="group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground">
-            <span className="group-open:hidden">Show connection details</span>
-            <span className="hidden group-open:inline">Hide connection details</span>
+            <span className="group-open:hidden">{copy.connection.showConnectionDetails}</span>
+            <span className="hidden group-open:inline">{copy.connection.hideConnectionDetails}</span>
           </summary>
           <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
             {buildConnectionDetails(status, uiState)}
@@ -263,6 +273,7 @@ function WebSocketBlockingState({
 }
 
 export function WebSocketConnectionCoordinator() {
+  const { copy } = useTranslation();
   const status = useWsConnectionStatus();
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastForcedReconnectAtRef = useRef(0);
@@ -286,8 +297,9 @@ export function WebSocketConnectionCoordinator() {
         }
         toastManager.add({
           type: "error",
-          title: "Reconnect failed",
-          description: error instanceof Error ? error.message : "Unable to restart the WebSocket.",
+          title: copy.connection.reconnectFailed,
+          description:
+            error instanceof Error ? error.message : copy.connection.unableToRestartWebsocket,
           data: {
             dismissAfterVisibleMs: 8_000,
             hideCopyButton: true,
@@ -395,9 +407,9 @@ export function WebSocketConnectionCoordinator() {
     if (shouldShowReconnectToast || shouldShowOfflineToast || shouldShowExhaustedToast) {
       const toastPayload = shouldShowOfflineToast
         ? {
-            description: describeOfflineToast(),
+            description: describeOfflineToast(copy),
             timeout: 0,
-            title: "Offline",
+            title: copy.connection.offline,
             type: "warning" as const,
             data: {
               hideCopyButton: true,
@@ -406,12 +418,12 @@ export function WebSocketConnectionCoordinator() {
         : shouldShowExhaustedToast
           ? {
               actionProps: {
-                children: "Retry",
+                children: copy.common.retry,
                 onClick: triggerManualReconnect,
               },
-              description: describeExhaustedToast(),
+              description: describeExhaustedToast(copy),
               timeout: 0,
-              title: "Disconnected from T3 Server",
+              title: copy.connection.disconnectedFromServer,
               type: "error" as const,
               data: {
                 hideCopyButton: true,
@@ -419,15 +431,18 @@ export function WebSocketConnectionCoordinator() {
             }
           : {
               actionProps: {
-                children: "Retry now",
+                children: copy.common.retryNow,
                 onClick: triggerManualReconnect,
               },
               description:
                 status.nextRetryAt === null
-                  ? `Reconnecting... ${formatReconnectAttemptLabel(status)}`
-                  : `Reconnecting in ${formatRetryCountdown(status.nextRetryAt, nowMs)}... ${formatReconnectAttemptLabel(status)}`,
+                  ? copy.connection.reconnectingAttempt(null, formatReconnectAttemptLabel(status))
+                  : copy.connection.reconnectingAttempt(
+                      formatRetryCountdown(status.nextRetryAt, nowMs),
+                      formatReconnectAttemptLabel(status),
+                    ),
               timeout: 0,
-              title: buildReconnectTitle(status),
+              title: copy.connection.disconnectedFromServer,
               type: "loading" as const,
               data: {
                 hideCopyButton: true,
@@ -450,8 +465,8 @@ export function WebSocketConnectionCoordinator() {
       previousDisconnectedAt !== null
     ) {
       const successToast = {
-        description: describeRecoveredToast(previousDisconnectedAt, status.connectedAt),
-        title: "Reconnected to T3 Server",
+        description: describeRecoveredToast(copy, previousDisconnectedAt, status.connectedAt),
+        title: copy.connection.reconnectedToServer,
         type: "success" as const,
         timeout: 0,
         data: {
@@ -488,6 +503,7 @@ export function WebSocketConnectionCoordinator() {
 }
 
 export function SlowRpcAckToastCoordinator() {
+  const { copy } = useTranslation();
   const slowRequests = useSlowRpcAckRequests();
   const status = useWsConnectionStatus();
   const toastIdRef = useRef<ReturnType<typeof toastManager.add> | null>(null);
@@ -510,9 +526,9 @@ export function SlowRpcAckToastCoordinator() {
     }
 
     const nextToast = {
-      description: describeSlowRpcAckToast(slowRequests),
+      description: describeSlowRpcAckToast(copy, slowRequests),
       timeout: 0,
-      title: "Some requests are slow",
+      title: copy.connection.someRequestsAreSlow,
       type: "warning" as const,
     };
 

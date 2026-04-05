@@ -3,6 +3,7 @@ import { ChevronDownIcon, ChevronLeftIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
+import { useTranslation } from "../../i18n";
 
 interface PendingActionState {
   questionIndex: number;
@@ -27,18 +28,21 @@ interface ComposerPrimaryActionsProps {
   onImplementPlanInNewThread: () => void;
 }
 
-const formatPendingPrimaryActionLabel = (input: {
+const formatPendingPrimaryActionLabel = (
+  input: {
   compact: boolean;
   isLastQuestion: boolean;
   isResponding: boolean;
-}) => {
+  },
+  copy: ReturnType<typeof useTranslation>["copy"],
+) => {
   if (input.isResponding) {
-    return "Submitting...";
+    return copy.composer.submitting;
   }
   if (input.compact) {
-    return input.isLastQuestion ? "Submit" : "Next";
+    return input.isLastQuestion ? copy.composer.submit : copy.composer.next;
   }
-  return input.isLastQuestion ? "Submit answers" : "Next question";
+  return input.isLastQuestion ? copy.composer.submitAnswers : copy.composer.nextQuestion;
 };
 
 export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
@@ -55,6 +59,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   onInterrupt,
   onImplementPlanInNewThread,
 }: ComposerPrimaryActionsProps) {
+  const { copy } = useTranslation();
+
   if (pendingAction) {
     return (
       <div className={cn("flex items-center justify-end", compact ? "gap-1.5" : "gap-2")}>
@@ -66,7 +72,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               className="rounded-full"
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
-              aria-label="Previous question"
+              aria-label={copy.composer.previousQuestion}
             >
               <ChevronLeftIcon className="size-3.5" />
             </Button>
@@ -78,7 +84,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
             >
-              Previous
+              {copy.composer.previous}
             </Button>
           )
         ) : null}
@@ -95,7 +101,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             compact,
             isLastQuestion: pendingAction.isLastQuestion,
             isResponding: pendingAction.isResponding,
-          })}
+          }, copy)}
         </Button>
       </div>
     );
@@ -107,7 +113,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         type="button"
         className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-rose-500/90 text-white transition-all duration-150 hover:bg-rose-500 hover:scale-105 sm:h-8 sm:w-8"
         onClick={onInterrupt}
-        aria-label="Stop generation"
+        aria-label={copy.composer.stopGeneration}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
           <rect x="2" y="2" width="8" height="8" rx="1.5" />
@@ -125,7 +131,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           className={cn("rounded-full", compact ? "h-9 px-3 sm:h-8" : "h-9 px-4 sm:h-8")}
           disabled={isSendBusy || isConnecting}
         >
-          {isConnecting || isSendBusy ? "Sending..." : "Refine"}
+          {isConnecting || isSendBusy ? copy.common.sending : copy.composer.refine}
         </Button>
       );
     }
@@ -138,7 +144,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           className={cn("h-9 rounded-l-full rounded-r-none sm:h-8", compact ? "px-3" : "px-4")}
           disabled={isSendBusy || isConnecting}
         >
-          {isConnecting || isSendBusy ? "Sending..." : "Implement"}
+          {isConnecting || isSendBusy ? copy.common.sending : copy.composer.implement}
         </Button>
         <Menu>
           <MenuTrigger
@@ -147,7 +153,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
                 size="sm"
                 variant="default"
                 className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
-                aria-label="Implementation actions"
+                aria-label={copy.composer.implementationActions}
                 disabled={isSendBusy || isConnecting}
               />
             }
@@ -159,7 +165,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               disabled={isSendBusy || isConnecting}
               onClick={() => void onImplementPlanInNewThread()}
             >
-              Implement in a new thread
+              {copy.composer.implementInNewThread}
             </MenuItem>
           </MenuPopup>
         </Menu>
@@ -174,12 +180,12 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
       disabled={isSendBusy || isConnecting || !hasSendableContent}
       aria-label={
         isConnecting
-          ? "Connecting"
+          ? copy.common.connecting
           : isPreparingWorktree
-            ? "Preparing worktree"
+            ? copy.composer.preparingWorktree
             : isSendBusy
-              ? "Sending"
-              : "Send message"
+              ? copy.common.sending
+              : copy.composer.sendMessage
       }
     >
       {isConnecting || isSendBusy ? (
