@@ -145,10 +145,7 @@ function getProviderConfigCopy(
   };
 }
 
-function getProviderSummary(
-  provider: ServerProvider | undefined,
-  language: AppLanguage,
-) {
+function getProviderSummary(provider: ServerProvider | undefined, language: AppLanguage) {
   if (!provider) {
     return {
       headline: language === "it" ? "Controllo stato provider" : "Checking provider status",
@@ -334,13 +331,7 @@ function SettingsRow({
   );
 }
 
-function SettingResetButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
+function SettingResetButton({ label, onClick }: { label: string; onClick: () => void }) {
   const { copy } = useTranslation();
 
   return (
@@ -655,7 +646,7 @@ export function GeneralSettingsPanel() {
   const serverProviders = useServerProviders();
   const codexHomePath = settings.providers.codex.homePath;
   const logsDirectoryPath = observability?.logsDirectoryPath ?? null;
-  const diagnosticsDescription = (() => {
+  const diagnosticsDescription = useMemo(() => {
     const exports: string[] = [];
     if (observability?.otlpTracesEnabled && observability.otlpTracesUrl) {
       exports.push(
@@ -671,14 +662,13 @@ export function GeneralSettingsPanel() {
           : `metrics to ${observability.otlpMetricsUrl}`,
       );
     }
-    const mode =
-      observability?.localTracingEnabled
-        ? language === "it"
-          ? "File di trace locale"
-          : "Local trace file"
-        : language === "it"
-          ? "Solo log del terminale"
-          : "Terminal logs only";
+    const mode = observability?.localTracingEnabled
+      ? language === "it"
+        ? "File di trace locale"
+        : "Local trace file"
+      : language === "it"
+        ? "Solo log del terminale"
+        : "Terminal logs only";
     return exports.length > 0
       ? `${mode}. ${language === "it" ? "Esportazione OTLP di" : "OTLP exporting"} ${exports.join(language === "it" ? " e " : " and ")}.`
       : `${mode}.`;
@@ -734,7 +724,9 @@ export function GeneralSettingsPanel() {
     openInPreferredEditor(
       "keybindings",
       keybindingsConfigPath,
-      language === "it" ? "Impossibile aprire il file delle scorciatoie." : "Unable to open keybindings file.",
+      language === "it"
+        ? "Impossibile aprire il file delle scorciatoie."
+        : "Unable to open keybindings file.",
     );
   }, [keybindingsConfigPath, language, openInPreferredEditor]);
 
@@ -771,9 +763,7 @@ export function GeneralSettingsPanel() {
         setCustomModelErrorByProvider((existing) => ({
           ...existing,
           [provider]:
-            language === "it"
-              ? "Questo modello è già incluso."
-              : "That model is already built in.",
+            language === "it" ? "Questo modello è già incluso." : "That model is already built in.",
         }));
         return;
       }
@@ -915,9 +905,13 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.themePreference}>
+              <SelectTrigger
+                className="w-full sm:min-w-40 sm:max-w-48"
+                aria-label={copy.settings.themePreference}
+              >
                 <SelectValue>
-                  {themeOptions.find((option) => option.value === theme)?.label ?? copy.common.system}
+                  {themeOptions.find((option) => option.value === theme)?.label ??
+                    copy.common.system}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
@@ -951,7 +945,10 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.language}>
+              <SelectTrigger
+                className="w-full sm:min-w-40 sm:max-w-48"
+                aria-label={copy.settings.language}
+              >
                 <SelectValue>{APP_LANGUAGE_LABELS[settings.language]}</SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
@@ -990,7 +987,10 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:min-w-40 sm:max-w-48" aria-label={copy.settings.timestampFormat}>
+              <SelectTrigger
+                className="w-full sm:min-w-40 sm:max-w-48"
+                aria-label={copy.settings.timestampFormat}
+              >
                 <SelectValue>{timestampFormatLabels[settings.timestampFormat]}</SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
@@ -1083,7 +1083,10 @@ export function GeneralSettingsPanel() {
                 }
               }}
             >
-              <SelectTrigger className="w-full sm:min-w-44 sm:max-w-52" aria-label={copy.settings.newThreads}>
+              <SelectTrigger
+                className="w-full sm:min-w-44 sm:max-w-52"
+                aria-label={copy.settings.newThreads}
+              >
                 <SelectValue>
                   {settings.defaultThreadEnvMode === "worktree"
                     ? copy.common.newWorktree
@@ -1432,7 +1435,9 @@ export function GeneralSettingsPanel() {
                     ) : null}
 
                     <div className="border-t border-border/60 px-4 py-3 sm:px-5">
-                      <div className="text-xs font-medium text-foreground">{copy.settings.models}</div>
+                      <div className="text-xs font-medium text-foreground">
+                        {copy.settings.models}
+                      </div>
                       <div className="mt-1 text-xs text-muted-foreground">
                         {language === "it"
                           ? `${providerCard.models.length} modell${providerCard.models.length === 1 ? "o disponibile" : "i disponibili"}.`
@@ -1695,7 +1700,9 @@ export function ArchivedThreadsPanel() {
           toastManager.add({
             type: "error",
             title:
-              language === "it" ? "Impossibile ripristinare il thread" : "Failed to unarchive thread",
+              language === "it"
+                ? "Impossibile ripristinare il thread"
+                : "Failed to unarchive thread",
             description:
               error instanceof Error
                 ? error.message
@@ -1753,8 +1760,7 @@ export function ArchivedThreadsPanel() {
                     {language === "it" ? "Archiviato" : "Archived"}{" "}
                     {formatRelativeTimeLabel(thread.archivedAt ?? thread.createdAt, language)}
                     {" \u00b7 "}
-                    {copy.common.createdAt}{" "}
-                    {formatRelativeTimeLabel(thread.createdAt, language)}
+                    {copy.common.createdAt} {formatRelativeTimeLabel(thread.createdAt, language)}
                   </p>
                 </div>
                 <Button

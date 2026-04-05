@@ -17,7 +17,7 @@ export function getUiLocale(language: AppLanguage): string {
 }
 
 export function useAppLanguage(): AppLanguage {
-  return useSettings((settings) => settings.language);
+  return useSettings().language;
 }
 
 export function useTranslation() {
@@ -27,9 +27,10 @@ export function useTranslation() {
     document.documentElement.lang = language;
   }, [language]);
 
-  return useMemo(() => ({ language, locale: getUiLocale(language), copy: getUiCopy(language) }), [
-    language,
-  ]);
+  return useMemo(
+    () => ({ language, locale: getUiLocale(language), copy: getUiCopy(language) }),
+    [language],
+  );
 }
 
 function getUiCopy(language: AppLanguage) {
@@ -117,7 +118,9 @@ function getUiCopy(language: AppLanguage) {
         : "Show token-by-token output while a response is in progress.",
       confirmThreadArchiving: it ? "Conferma archiviazione thread" : "Confirm thread archiving",
       confirmThreadDeletion: it ? "Conferma eliminazione thread" : "Confirm thread deletion",
-      currentAppVersion: it ? "Versione corrente dell’applicazione." : "Current version of the application.",
+      currentAppVersion: it
+        ? "Versione corrente dell’applicazione."
+        : "Current version of the application.",
       deleteConfirmation: it ? "Conferma eliminazione" : "Delete confirmation",
       deleteConfirmationDescription: it
         ? "Chiede conferma prima di eliminare un thread e la sua cronologia."
@@ -143,7 +146,9 @@ function getUiCopy(language: AppLanguage) {
         ? "Scegli la modalità workspace predefinita per i nuovi thread bozza."
         : "Pick the default workspace mode for newly created draft threads.",
       openLogsFolder: it ? "Apri cartella log" : "Open logs folder",
-      openPreferredEditor: it ? "Si apre nell’editor preferito." : "Opens in your preferred editor.",
+      openPreferredEditor: it
+        ? "Si apre nell’editor preferito."
+        : "Opens in your preferred editor.",
       providers: it ? "Provider" : "Providers",
       refreshProviderStatus: it ? "Aggiorna stato provider" : "Refresh provider status",
       restoreDefaultsConfirmation: (labels: string) =>
@@ -166,7 +171,9 @@ function getUiCopy(language: AppLanguage) {
       timestampFormat: it ? "Formato orario" : "Timestamp format",
       unarchive: it ? "Ripristina" : "Unarchive",
       unavailableEditor: it ? "Nessun editor disponibile." : "No available editors found.",
-      wrappingAria: it ? "Vai a capo le righe del diff per impostazione predefinita" : "Wrap diff lines by default",
+      wrappingAria: it
+        ? "Vai a capo le righe del diff per impostazione predefinita"
+        : "Wrap diff lines by default",
     },
     sidebar: {
       archive: it ? "Archivia" : "Archive",
@@ -265,7 +272,9 @@ function getUiCopy(language: AppLanguage) {
       offlineDescription: it
         ? "Il browser è offline, quindi il client web non può raggiungere il server T3. Riconnettiti alla rete e l’app riproverà automaticamente."
         : "Your browser is offline, so the web client cannot reach the T3 server. Reconnect to the network and the app will retry automatically.",
-      offlineToast: it ? "WebSocket disconnesso. In attesa della rete." : "WebSocket disconnected. Waiting for network.",
+      offlineToast: it
+        ? "WebSocket disconnesso. In attesa della rete."
+        : "WebSocket disconnected. Waiting for network.",
       pending: it ? "In attesa" : "Pending",
       reconnectFailed: it ? "Riconnessione fallita" : "Reconnect failed",
       reconnectingAttempt: (countdown: string | null, attemptLabel: string) =>
@@ -277,7 +286,9 @@ function getUiCopy(language: AppLanguage) {
             ? `Riconnessione... ${attemptLabel}`
             : `Reconnecting... ${attemptLabel}`,
       reconnectedToServer: it ? "Riconnesso al server T3" : "Reconnected to T3 Server",
-      retryingServerConnection: it ? "Nuovo tentativo verso il server" : "Retrying server connection",
+      retryingServerConnection: it
+        ? "Nuovo tentativo verso il server"
+        : "Retrying server connection",
       sessionStart: it ? "Avvio sessione" : "Starting Session",
       showConnectionDetails: it ? "Mostra dettagli connessione" : "Show connection details",
       slowRequests: (count: number, thresholdSeconds: number) =>
@@ -302,7 +313,9 @@ function getUiCopy(language: AppLanguage) {
         ? "Disattiva il ritorno a capo nel diff"
         : "Disable diff line wrapping",
       enableLineWrapping: it ? "Attiva ritorno a capo" : "Enable line wrapping",
-      enableLineWrappingAria: it ? "Attiva il ritorno a capo nel diff" : "Enable diff line wrapping",
+      enableLineWrappingAria: it
+        ? "Attiva il ritorno a capo nel diff"
+        : "Enable diff line wrapping",
       loadingDiffViewer: it ? "Caricamento visualizzatore diff..." : "Loading diff viewer...",
     },
   } as const;

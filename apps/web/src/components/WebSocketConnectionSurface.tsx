@@ -261,7 +261,9 @@ function WebSocketBlockingState({
         <details className="group mt-5 overflow-hidden rounded-lg border border-border/70 bg-background/55">
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-muted-foreground">
             <span className="group-open:hidden">{copy.connection.showConnectionDetails}</span>
-            <span className="hidden group-open:inline">{copy.connection.hideConnectionDetails}</span>
+            <span className="hidden group-open:inline">
+              {copy.connection.hideConnectionDetails}
+            </span>
           </summary>
           <pre className="max-h-56 overflow-auto border-t border-border/70 bg-background/80 px-3 py-2 text-xs text-foreground/85">
             {buildConnectionDetails(status, uiState)}

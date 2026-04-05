@@ -486,11 +486,11 @@ function SidebarThreadRow(props: SidebarThreadRowProps) {
                       event.stopPropagation();
                       props.setConfirmingArchiveThreadId(thread.id);
                       requestAnimationFrame(() => {
-                          props.confirmArchiveButtonRefs.current.get(thread.id)?.focus();
-                        });
-                      }}
-                    >
-                      <ArchiveIcon className="size-3.5" />
+                        props.confirmArchiveButtonRefs.current.get(thread.id)?.focus();
+                      });
+                    }}
+                  >
+                    <ArchiveIcon className="size-3.5" />
                   </button>
                 </div>
               ) : (
@@ -635,13 +635,13 @@ function ProjectSortMenu({
               onThreadSortOrderChange(value as SidebarThreadSortOrder);
             }}
           >
-            {(
-              Object.entries(threadSortLabels) as Array<[SidebarThreadSortOrder, string]>
-            ).map(([value, label]) => (
-              <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
-                {label}
-              </MenuRadioItem>
-            ))}
+            {(Object.entries(threadSortLabels) as Array<[SidebarThreadSortOrder, string]>).map(
+              ([value, label]) => (
+                <MenuRadioItem key={value} value={value} className="min-h-7 py-1 sm:text-xs">
+                  {label}
+                </MenuRadioItem>
+              ),
+            )}
           </MenuRadioGroup>
         </MenuGroup>
       </MenuPopup>
@@ -859,12 +859,12 @@ export default function Sidebar() {
       try {
         await archiveThread(threadId);
       } catch (error) {
-          toastManager.add({
-            type: "error",
-            title:
-              language === "it" ? "Impossibile archiviare il thread" : "Failed to archive thread",
-            description: error instanceof Error ? error.message : "An error occurred.",
-          });
+        toastManager.add({
+          type: "error",
+          title:
+            language === "it" ? "Impossibile archiviare il thread" : "Failed to archive thread",
+          description: error instanceof Error ? error.message : "An error occurred.",
+        });
       }
     },
     [archiveThread],
@@ -937,7 +937,8 @@ export default function Sidebar() {
         if (shouldBrowseForProjectImmediately) {
           toastManager.add({
             type: "error",
-                    title: language === "it" ? "Impossibile aggiungere il progetto" : "Failed to add project",
+            title:
+              language === "it" ? "Impossibile aggiungere il progetto" : "Failed to add project",
             description,
           });
         } else {
@@ -1055,7 +1056,8 @@ export default function Sidebar() {
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: language === "it" ? "Impossibile copiare l’ID del thread" : "Failed to copy thread ID",
+        title:
+          language === "it" ? "Impossibile copiare l’ID del thread" : "Failed to copy thread ID",
         description: error instanceof Error ? error.message : "An error occurred.",
       });
     },
@@ -1264,7 +1266,10 @@ export default function Sidebar() {
 
       const clicked = await api.contextMenu.show(
         [
-          { id: "copy-path", label: language === "it" ? "Copia percorso progetto" : "Copy Project Path" },
+          {
+            id: "copy-path",
+            label: language === "it" ? "Copia percorso progetto" : "Copy Project Path",
+          },
           { id: "delete", label: "Remove project", destructive: true },
         ],
         position,
@@ -2043,10 +2048,12 @@ export default function Sidebar() {
           <SidebarContent className="gap-0">
             {showArm64IntelBuildWarning && arm64IntelBuildWarningDescription ? (
               <SidebarGroup className="px-2 pt-2 pb-0">
-                  <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
-                    <TriangleAlertIcon />
+                <Alert variant="warning" className="rounded-2xl border-warning/40 bg-warning/8">
+                  <TriangleAlertIcon />
                   <AlertTitle>
-                    {language === "it" ? "Build Intel su Apple Silicon" : "Intel build on Apple Silicon"}
+                    {language === "it"
+                      ? "Build Intel su Apple Silicon"
+                      : "Intel build on Apple Silicon"}
                   </AlertTitle>
                   <AlertDescription>{arm64IntelBuildWarningDescription}</AlertDescription>
                   {desktopUpdateButtonAction !== "none" ? (
@@ -2152,7 +2159,9 @@ export default function Sidebar() {
                           ? "border-red-500/70 focus:border-red-500"
                           : "border-border focus:border-ring"
                       }`}
-                      placeholder={language === "it" ? "/percorso/del/progetto" : "/path/to/project"}
+                      placeholder={
+                        language === "it" ? "/percorso/del/progetto" : "/path/to/project"
+                      }
                       value={newCwd}
                       onChange={(event) => {
                         setNewCwd(event.target.value);

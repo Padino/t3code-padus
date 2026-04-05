@@ -138,12 +138,20 @@ export const OpenInPicker = memo(function OpenInPicker({
       <GroupSeparator className="hidden @3xl/header-actions:block" />
       <Menu>
         <MenuTrigger
-          render={<Button aria-label={copy.openInPicker.subscriptionActions} size="icon-xs" variant="outline" />}
+          render={
+            <Button
+              aria-label={copy.openInPicker.subscriptionActions}
+              size="icon-xs"
+              variant="outline"
+            />
+          }
         >
           <ChevronDownIcon aria-hidden="true" className="size-4" />
         </MenuTrigger>
         <MenuPopup align="end">
-          {options.length === 0 && <MenuItem disabled>{copy.openInPicker.noInstalledEditorsFound}</MenuItem>}
+          {options.length === 0 && (
+            <MenuItem disabled>{copy.openInPicker.noInstalledEditorsFound}</MenuItem>
+          )}
           {options.map(({ label, Icon, value }) => (
             <MenuItem key={value} onClick={() => openInEditor(value)}>
               <Icon aria-hidden="true" className="text-muted-foreground" />

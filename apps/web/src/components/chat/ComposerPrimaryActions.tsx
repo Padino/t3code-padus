@@ -30,9 +30,9 @@ interface ComposerPrimaryActionsProps {
 
 const formatPendingPrimaryActionLabel = (
   input: {
-  compact: boolean;
-  isLastQuestion: boolean;
-  isResponding: boolean;
+    compact: boolean;
+    isLastQuestion: boolean;
+    isResponding: boolean;
   },
   copy: ReturnType<typeof useTranslation>["copy"],
 ) => {
@@ -97,11 +97,14 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             (pendingAction.isLastQuestion ? !pendingAction.isComplete : !pendingAction.canAdvance)
           }
         >
-          {formatPendingPrimaryActionLabel({
-            compact,
-            isLastQuestion: pendingAction.isLastQuestion,
-            isResponding: pendingAction.isResponding,
-          }, copy)}
+          {formatPendingPrimaryActionLabel(
+            {
+              compact,
+              isLastQuestion: pendingAction.isLastQuestion,
+              isResponding: pendingAction.isResponding,
+            },
+            copy,
+          )}
         </Button>
       </div>
     );
