@@ -161,8 +161,15 @@ function getUiCopy(language: AppLanguage) {
         : "Configure the model used for generated commit messages, PR titles, and similar Git text.",
       theme: it ? "Tema" : "Theme",
       themeDescription: it
-        ? "Scegli l’aspetto di T3 Code in tutta l’app."
-        : "Choose how T3 Code looks across the app.",
+        ? "Controlla quando usare la resa chiara o quella super-black. L’opzione sistema segue il tema del sistema operativo."
+        : "Control when the light or super-black appearance is used. System follows your OS theme.",
+      themePalette: it ? "Palette tema" : "Theme palette",
+      themePaletteDefault: it ? "Predefinita" : "Default",
+      themePaletteDescription: it
+        ? "Applica una palette colore che segue comunque la modalità chiara o scura selezionata."
+        : "Apply a color palette that still follows the selected light or dark mode.",
+      themePalettePreference: it ? "Preferenza palette tema" : "Theme palette preference",
+      themePaletteSage: it ? "Verde salvia" : "Sage green",
       themePreference: it ? "Preferenza tema" : "Theme preference",
       timeFormat: it ? "Formato orario" : "Time format",
       timeFormatDescription: it

@@ -580,7 +580,6 @@ describe("getVisibleThreadsForProject", () => {
     const result = getVisibleThreadsForProject({
       threads,
       activeThreadId: ThreadId.makeUnsafe("thread-8"),
-      isThreadListExpanded: false,
       previewLimit: 6,
     });
 
@@ -591,15 +590,15 @@ describe("getVisibleThreadsForProject", () => {
       ThreadId.makeUnsafe("thread-3"),
       ThreadId.makeUnsafe("thread-4"),
       ThreadId.makeUnsafe("thread-5"),
-      ThreadId.makeUnsafe("thread-6"),
       ThreadId.makeUnsafe("thread-8"),
     ]);
     expect(result.hiddenThreads.map((thread) => thread.id)).toEqual([
+      ThreadId.makeUnsafe("thread-6"),
       ThreadId.makeUnsafe("thread-7"),
     ]);
   });
 
-  it("returns all threads when the list is expanded", () => {
+  it("returns the preview threads unchanged when the active thread is already visible", () => {
     const threads = Array.from({ length: 8 }, (_, index) =>
       makeThread({
         id: ThreadId.makeUnsafe(`thread-${index + 1}`),
@@ -608,16 +607,18 @@ describe("getVisibleThreadsForProject", () => {
 
     const result = getVisibleThreadsForProject({
       threads,
-      activeThreadId: ThreadId.makeUnsafe("thread-8"),
-      isThreadListExpanded: true,
+      activeThreadId: ThreadId.makeUnsafe("thread-3"),
       previewLimit: 6,
     });
 
     expect(result.hasHiddenThreads).toBe(true);
     expect(result.visibleThreads.map((thread) => thread.id)).toEqual(
-      threads.map((thread) => thread.id),
+      threads.slice(0, 6).map((thread) => thread.id),
     );
-    expect(result.hiddenThreads).toEqual([]);
+    expect(result.hiddenThreads.map((thread) => thread.id)).toEqual([
+      ThreadId.makeUnsafe("thread-7"),
+      ThreadId.makeUnsafe("thread-8"),
+    ]);
   });
 });
 
@@ -866,7 +867,7 @@ describe("getFallbackThreadIdAfterDelete", () => {
 });
 
 describe("sortProjectsForSidebar", () => {
-  it("sorts projects by the most recent user message across their threads", () => {
+  it("sorts projects by the most recent thread update across their threads", () => {
     const projects = [
       makeProject({ id: ProjectId.makeUnsafe("project-1"), name: "Older project" }),
       makeProject({ id: ProjectId.makeUnsafe("project-2"), name: "Newer project" }),
@@ -895,15 +896,42 @@ describe("sortProjectsForSidebar", () => {
             id: "message-2" as never,
             role: "user",
             text: "newer project user message",
-            createdAt: "2026-03-09T10:05:00.000Z",
+            createdAt: "2026-03-09T10:10:00.000Z",
             streaming: false,
-            completedAt: "2026-03-09T10:05:00.000Z",
+            completedAt: "2026-03-09T10:10:00.000Z",
           },
         ],
       }),
     ];
 
     const sorted = sortProjectsForSidebar(projects, threads, "updated_at");
+
+    expect(sorted.map((project) => project.id)).toEqual([
+      ProjectId.makeUnsafe("project-1"),
+      ProjectId.makeUnsafe("project-2"),
+    ]);
+  });
+
+  it("uses project creation timestamps when sorting by createdAt", () => {
+    const sorted = sortProjectsForSidebar(
+      [
+        makeProject({
+          id: ProjectId.makeUnsafe("project-1"),
+          createdAt: "2026-03-09T10:00:00.000Z",
+        }),
+        makeProject({
+          id: ProjectId.makeUnsafe("project-2"),
+          createdAt: "2026-03-09T10:10:00.000Z",
+        }),
+      ],
+      [
+        makeThread({
+          projectId: ProjectId.makeUnsafe("project-1"),
+          createdAt: "2026-03-09T11:00:00.000Z",
+        }),
+      ],
+      "created_at",
+    );
 
     expect(sorted.map((project) => project.id)).toEqual([
       ProjectId.makeUnsafe("project-2"),

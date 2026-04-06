@@ -189,6 +189,7 @@ export function syncProjects(state: UiState, projects: readonly SyncProjectInput
           );
           const usedProjectIds = new Set<ProjectId>();
           const orderedProjectIds: ProjectId[] = [];
+          const newProjectIds: ProjectId[] = [];
 
           for (const projectId of state.projectOrder) {
             const matchedProjectId =
@@ -208,10 +209,10 @@ export function syncProjects(state: UiState, projects: readonly SyncProjectInput
             if (usedProjectIds.has(project.id)) {
               continue;
             }
-            orderedProjectIds.push(project.id);
+            newProjectIds.push(project.id);
           }
 
-          return orderedProjectIds;
+          return [...newProjectIds.toReversed(), ...orderedProjectIds];
         })()
       : mappedProjects
           .map((project) => ({
