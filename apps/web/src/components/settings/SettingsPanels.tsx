@@ -1,6 +1,7 @@
 import {
   ArchiveIcon,
   ArchiveX,
+  CheckIcon,
   ChevronDownIcon,
   InfoIcon,
   LoaderIcon,
@@ -33,7 +34,7 @@ import { ProviderModelPicker } from "../chat/ProviderModelPicker";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import { resolveAndPersistPreferredEditor } from "../../editorPreferences";
 import { isElectron } from "../../env";
-import { useTheme, type ThemePalette } from "../../hooks/useTheme";
+import { useTheme } from "../../hooks/useTheme";
 import { useSettings, useUpdateSettings } from "../../hooks/useSettings";
 import { useThreadActions } from "../../hooks/useThreadActions";
 import {
@@ -66,6 +67,13 @@ import {
 } from "../../rpc/serverState";
 import { APP_LANGUAGE_LABELS, useTranslation } from "../../i18n";
 import { type AppLanguage } from "@t3tools/contracts/settings";
+import {
+  DEFAULT_THEME,
+  DEFAULT_THEME_PRESET,
+  getThemePresetDefinitions,
+  type ThemePresetDefinition,
+  type ThemePresetId,
+} from "../../theme";
 
 type InstallProviderSettings = {
   provider: ProviderKind;
@@ -103,13 +111,6 @@ function getThemeOptions(copy: ReturnType<typeof useTranslation>["copy"]) {
     { value: "light", label: copy.common.light },
     { value: "dark", label: copy.common.dark },
   ] as const;
-}
-
-function getThemePaletteOptions(copy: ReturnType<typeof useTranslation>["copy"]) {
-  return [
-    { value: "default", label: copy.settings.themePaletteDefault },
-    { value: "sage", label: copy.settings.themePaletteSage },
-  ] as const satisfies ReadonlyArray<{ value: ThemePalette; label: string }>;
 }
 
 function getTimestampFormatLabels(copy: ReturnType<typeof useTranslation>["copy"]) {
@@ -372,6 +373,104 @@ function SettingsPageContainer({ children }: { children: ReactNode }) {
   );
 }
 
+function ThemePresetPicker({
+  presets,
+  value,
+  onValueChange,
+}: {
+  presets: ReadonlyArray<ThemePresetDefinition>;
+  value: ThemePresetId;
+  onValueChange: (next: ThemePresetId) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {presets.map((preset) => {
+        const selected = preset.id === value;
+        const previewForeground = preset.previewForeground;
+
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            aria-pressed={selected}
+            className={cn(
+              "group overflow-hidden rounded-xl border bg-background text-left transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-ring/50 hover:shadow-lg/8 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+              selected ? "border-primary shadow-lg/10 ring-2 ring-primary/18" : "border-border/80",
+            )}
+            onClick={() => onValueChange(preset.id)}
+          >
+            <div
+              className="relative h-24 border-b"
+              style={{
+                background: `linear-gradient(140deg, ${preset.background} 0%, ${preset.card} 100%)`,
+                borderColor: selected ? `${preset.accent}66` : `${preset.accent}2a`,
+              }}
+            >
+              <div
+                className="absolute inset-0 opacity-90"
+                style={{
+                  background: `radial-gradient(circle at 18% 18%, ${preset.accent}44 0%, transparent 42%), radial-gradient(circle at 82% 24%, ${preset.accent}26 0%, transparent 36%)`,
+                }}
+              />
+              <div className="absolute left-3 top-3 flex items-center gap-1.5">
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: `${previewForeground}33` }}
+                />
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: `${previewForeground}4d` }}
+                />
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: preset.accent }}
+                />
+              </div>
+              <div
+                className="absolute inset-x-3 bottom-3 rounded-lg border px-3 py-2 shadow-lg/10 backdrop-blur-sm"
+                style={{
+                  backgroundColor: `${preset.card}f2`,
+                  borderColor: `${preset.accent}40`,
+                  color: previewForeground,
+                }}
+              >
+                <div className="flex items-center justify-between gap-3 text-[11px] font-medium">
+                  <span className="truncate">{preset.label}</span>
+                  <span
+                    className="h-2 w-8 rounded-full"
+                    style={{ backgroundColor: preset.accent }}
+                  />
+                </div>
+                <div
+                  className="mt-1 h-1.5 rounded-full"
+                  style={{ backgroundColor: `${previewForeground}1f` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-foreground">{preset.label}</span>
+                <span
+                  className={cn(
+                    "inline-flex size-5 items-center justify-center rounded-full border transition-opacity",
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground opacity-100"
+                      : "border-border/80 bg-muted/60 text-muted-foreground opacity-70",
+                  )}
+                >
+                  <CheckIcon className="size-3" />
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{preset.description}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AboutVersionTitle() {
   const { copy } = useTranslation();
 
@@ -458,7 +557,14 @@ function AboutVersionSection() {
           description: error instanceof Error ? error.message : copy.common.checkForUpdates,
         });
       });
-  }, [queryClient, updateState]);
+  }, [
+    copy.common.checkForUpdates,
+    copy.common.download,
+    copy.common.install,
+    language,
+    queryClient,
+    updateState,
+  ]);
 
   const action = updateState ? resolveDesktopUpdateButtonAction(updateState) : "none";
   const buttonTooltip = updateState ? getDesktopUpdateButtonTooltip(updateState) : null;
@@ -512,7 +618,7 @@ function AboutVersionSection() {
 
 export function useSettingsRestore(onRestored?: () => void) {
   const { copy } = useTranslation();
-  const { theme, setTheme, themePalette, setThemePalette } = useTheme();
+  const { theme, setTheme, themePreset, setThemePreset } = useTheme();
   const settings = useSettings();
   const { resetSettings } = useUpdateSettings();
 
@@ -528,8 +634,8 @@ export function useSettingsRestore(onRestored?: () => void) {
 
   const changedSettingLabels = useMemo(
     () => [
-      ...(theme !== "system" ? [copy.settings.theme] : []),
-      ...(themePalette !== "default" ? [copy.settings.themePalette] : []),
+      ...(theme !== DEFAULT_THEME ? [copy.settings.theme] : []),
+      ...(themePreset !== DEFAULT_THEME_PRESET ? [copy.settings.themePalette] : []),
       ...(settings.language !== DEFAULT_UNIFIED_SETTINGS.language ? [copy.settings.language] : []),
       ...(settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat
         ? [copy.settings.timeFormat]
@@ -574,7 +680,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.language,
       settings.timestampFormat,
       theme,
-      themePalette,
+      themePreset,
     ],
   );
 
@@ -586,11 +692,11 @@ export function useSettingsRestore(onRestored?: () => void) {
     );
     if (!confirmed) return;
 
-    setTheme("system");
-    setThemePalette("default");
+    setTheme(DEFAULT_THEME);
+    setThemePreset(DEFAULT_THEME_PRESET);
     resetSettings();
     onRestored?.();
-  }, [changedSettingLabels, copy, onRestored, resetSettings, setTheme, setThemePalette]);
+  }, [changedSettingLabels, copy, onRestored, resetSettings, setTheme, setThemePreset]);
 
   return {
     changedSettingLabels,
@@ -600,9 +706,10 @@ export function useSettingsRestore(onRestored?: () => void) {
 
 export function GeneralSettingsPanel() {
   const { copy, language } = useTranslation();
-  const { theme, setTheme, themePalette, setThemePalette } = useTheme();
+  const { theme, setTheme, themePreset, setThemePreset, resolvedTheme } = useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
+  const [isThemesSectionOpen, setIsThemesSectionOpen] = useState(true);
   const [openingPathByTarget, setOpeningPathByTarget] = useState({
     keybindings: false,
     logsDirectory: false,
@@ -633,7 +740,12 @@ export function GeneralSettingsPanel() {
   >({});
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
   const themeOptions = useMemo(() => getThemeOptions(copy), [copy]);
-  const themePaletteOptions = useMemo(() => getThemePaletteOptions(copy), [copy]);
+  const themePresets = useMemo(() => getThemePresetDefinitions(language), [language]);
+  const hiddenThemePresetId = resolvedTheme === "dark" ? "light" : "super-black";
+  const visibleThemePresets = useMemo(
+    () => themePresets.filter((preset) => preset.id !== hiddenThemePresetId),
+    [hiddenThemePresetId, themePresets],
+  );
   const timestampFormatLabels = useMemo(() => getTimestampFormatLabels(copy), [copy]);
   const refreshingRef = useRef(false);
   const modelListRefs = useRef<Partial<Record<ProviderKind, HTMLDivElement | null>>>({});
@@ -897,86 +1009,98 @@ export function GeneralSettingsPanel() {
           serverProviders[0]!.checkedAt,
         )
       : null;
+
+  useEffect(() => {
+    if (themePreset === hiddenThemePresetId) {
+      setThemePreset(DEFAULT_THEME_PRESET);
+    }
+  }, [hiddenThemePresetId, setThemePreset, themePreset]);
+
   return (
     <SettingsPageContainer>
+      <SettingsSection
+        title={copy.settings.themes}
+        headerAction={
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            aria-label={`${isThemesSectionOpen ? copy.common.hideDetails : copy.common.showDetails}: ${copy.settings.themes}`}
+            onClick={() => setIsThemesSectionOpen((open) => !open)}
+          >
+            <ChevronDownIcon
+              className={cn("size-3.5 transition-transform", isThemesSectionOpen && "rotate-180")}
+            />
+          </Button>
+        }
+      >
+        <Collapsible open={isThemesSectionOpen} onOpenChange={setIsThemesSectionOpen}>
+          <CollapsibleContent>
+            <SettingsRow
+              title={copy.settings.themeMode}
+              description={copy.settings.themeDescription}
+              resetAction={
+                theme !== DEFAULT_THEME ? (
+                  <SettingResetButton
+                    label={copy.settings.themeMode}
+                    onClick={() => setTheme(DEFAULT_THEME)}
+                  />
+                ) : null
+              }
+              control={
+                <Select
+                  value={theme}
+                  onValueChange={(value) => {
+                    if (value === "system" || value === "light" || value === "dark") {
+                      setTheme(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    className="w-full sm:min-w-40 sm:max-w-48"
+                    aria-label={copy.settings.themePreference}
+                  >
+                    <SelectValue>
+                      {themeOptions.find((option) => option.value === theme)?.label ??
+                        copy.common.system}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectPopup align="end" alignItemWithTrigger={false}>
+                    {themeOptions.map((option) => (
+                      <SelectItem hideIndicator key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectPopup>
+                </Select>
+              }
+            />
+
+            <SettingsRow
+              title={copy.settings.themePalette}
+              description={copy.settings.themePaletteDescription}
+              resetAction={
+                themePreset !== DEFAULT_THEME_PRESET ? (
+                  <SettingResetButton
+                    label={copy.settings.themePalette}
+                    onClick={() => setThemePreset(DEFAULT_THEME_PRESET)}
+                  />
+                ) : null
+              }
+            >
+              <div className="pt-1">
+                <ThemePresetPicker
+                  presets={visibleThemePresets}
+                  value={themePreset}
+                  onValueChange={setThemePreset}
+                />
+              </div>
+            </SettingsRow>
+          </CollapsibleContent>
+        </Collapsible>
+      </SettingsSection>
+
       <SettingsSection title={copy.settings.general}>
-        <SettingsRow
-          title={copy.settings.theme}
-          description={copy.settings.themeDescription}
-          resetAction={
-            theme !== "system" ? (
-              <SettingResetButton label={copy.settings.theme} onClick={() => setTheme("system")} />
-            ) : null
-          }
-          control={
-            <Select
-              value={theme}
-              onValueChange={(value) => {
-                if (value === "system" || value === "light" || value === "dark") {
-                  setTheme(value);
-                }
-              }}
-            >
-              <SelectTrigger
-                className="w-full sm:min-w-40 sm:max-w-48"
-                aria-label={copy.settings.themePreference}
-              >
-                <SelectValue>
-                  {themeOptions.find((option) => option.value === theme)?.label ??
-                    copy.common.system}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectPopup align="end" alignItemWithTrigger={false}>
-                {themeOptions.map((option) => (
-                  <SelectItem hideIndicator key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectPopup>
-            </Select>
-          }
-        />
-
-        <SettingsRow
-          title={copy.settings.themePalette}
-          description={copy.settings.themePaletteDescription}
-          resetAction={
-            themePalette !== "default" ? (
-              <SettingResetButton
-                label={copy.settings.themePalette}
-                onClick={() => setThemePalette("default")}
-              />
-            ) : null
-          }
-          control={
-            <Select
-              value={themePalette}
-              onValueChange={(value) => {
-                if (value === "default" || value === "sage") {
-                  setThemePalette(value);
-                }
-              }}
-            >
-              <SelectTrigger
-                className="w-full sm:min-w-40 sm:max-w-48"
-                aria-label={copy.settings.themePalettePreference}
-              >
-                <SelectValue>
-                  {themePaletteOptions.find((option) => option.value === themePalette)?.label ??
-                    copy.settings.themePaletteDefault}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectPopup align="end" alignItemWithTrigger={false}>
-                {themePaletteOptions.map((option) => (
-                  <SelectItem hideIndicator key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectPopup>
-            </Select>
-          }
-        />
-
         <SettingsRow
           title={copy.settings.language}
           description={copy.settings.languageDescription}
@@ -1770,7 +1894,13 @@ export function ArchivedThreadsPanel() {
         await confirmAndDeleteThread(threadId);
       }
     },
-    [confirmAndDeleteThread, unarchiveThread],
+    [
+      confirmAndDeleteThread,
+      copy.common.delete,
+      copy.settings.unarchive,
+      language,
+      unarchiveThread,
+    ],
   );
 
   return (
