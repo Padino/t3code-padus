@@ -33,7 +33,7 @@ import { ProviderModelPicker } from "../chat/ProviderModelPicker";
 import { TraitsPicker } from "../chat/TraitsPicker";
 import { resolveAndPersistPreferredEditor } from "../../editorPreferences";
 import { isElectron } from "../../env";
-import { useTheme } from "../../hooks/useTheme";
+import { useTheme, type ThemePalette } from "../../hooks/useTheme";
 import { useSettings, useUpdateSettings } from "../../hooks/useSettings";
 import { useThreadActions } from "../../hooks/useThreadActions";
 import {
@@ -103,6 +103,13 @@ function getThemeOptions(copy: ReturnType<typeof useTranslation>["copy"]) {
     { value: "light", label: copy.common.light },
     { value: "dark", label: copy.common.dark },
   ] as const;
+}
+
+function getThemePaletteOptions(copy: ReturnType<typeof useTranslation>["copy"]) {
+  return [
+    { value: "default", label: copy.settings.themePaletteDefault },
+    { value: "sage", label: copy.settings.themePaletteSage },
+  ] as const satisfies ReadonlyArray<{ value: ThemePalette; label: string }>;
 }
 
 function getTimestampFormatLabels(copy: ReturnType<typeof useTranslation>["copy"]) {
@@ -505,7 +512,7 @@ function AboutVersionSection() {
 
 export function useSettingsRestore(onRestored?: () => void) {
   const { copy } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, themePalette, setThemePalette } = useTheme();
   const settings = useSettings();
   const { resetSettings } = useUpdateSettings();
 
@@ -522,6 +529,7 @@ export function useSettingsRestore(onRestored?: () => void) {
   const changedSettingLabels = useMemo(
     () => [
       ...(theme !== "system" ? [copy.settings.theme] : []),
+      ...(themePalette !== "default" ? [copy.settings.themePalette] : []),
       ...(settings.language !== DEFAULT_UNIFIED_SETTINGS.language ? [copy.settings.language] : []),
       ...(settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat
         ? [copy.settings.timeFormat]
@@ -555,6 +563,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       copy.settings.providers,
       copy.settings.textGenerationModel,
       copy.settings.theme,
+      copy.settings.themePalette,
       copy.settings.timeFormat,
       isGitWritingModelDirty,
       settings.confirmThreadArchive,
@@ -565,6 +574,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.language,
       settings.timestampFormat,
       theme,
+      themePalette,
     ],
   );
 
@@ -577,9 +587,10 @@ export function useSettingsRestore(onRestored?: () => void) {
     if (!confirmed) return;
 
     setTheme("system");
+    setThemePalette("default");
     resetSettings();
     onRestored?.();
-  }, [changedSettingLabels, onRestored, resetSettings, setTheme]);
+  }, [changedSettingLabels, copy, onRestored, resetSettings, setTheme, setThemePalette]);
 
   return {
     changedSettingLabels,
@@ -589,7 +600,7 @@ export function useSettingsRestore(onRestored?: () => void) {
 
 export function GeneralSettingsPanel() {
   const { copy, language } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, themePalette, setThemePalette } = useTheme();
   const settings = useSettings();
   const { updateSettings } = useUpdateSettings();
   const [openingPathByTarget, setOpeningPathByTarget] = useState({
@@ -622,6 +633,7 @@ export function GeneralSettingsPanel() {
   >({});
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
   const themeOptions = useMemo(() => getThemeOptions(copy), [copy]);
+  const themePaletteOptions = useMemo(() => getThemePaletteOptions(copy), [copy]);
   const timestampFormatLabels = useMemo(() => getTimestampFormatLabels(copy), [copy]);
   const refreshingRef = useRef(false);
   const modelListRefs = useRef<Partial<Record<ProviderKind, HTMLDivElement | null>>>({});
@@ -916,6 +928,46 @@ export function GeneralSettingsPanel() {
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 {themeOptions.map((option) => (
+                  <SelectItem hideIndicator key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title={copy.settings.themePalette}
+          description={copy.settings.themePaletteDescription}
+          resetAction={
+            themePalette !== "default" ? (
+              <SettingResetButton
+                label={copy.settings.themePalette}
+                onClick={() => setThemePalette("default")}
+              />
+            ) : null
+          }
+          control={
+            <Select
+              value={themePalette}
+              onValueChange={(value) => {
+                if (value === "default" || value === "sage") {
+                  setThemePalette(value);
+                }
+              }}
+            >
+              <SelectTrigger
+                className="w-full sm:min-w-40 sm:max-w-48"
+                aria-label={copy.settings.themePalettePreference}
+              >
+                <SelectValue>
+                  {themePaletteOptions.find((option) => option.value === themePalette)?.label ??
+                    copy.settings.themePaletteDefault}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                {themePaletteOptions.map((option) => (
                   <SelectItem hideIndicator key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

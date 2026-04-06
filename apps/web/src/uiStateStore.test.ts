@@ -61,7 +61,7 @@ describe("uiStateStore pure functions", () => {
     expect(next.projectOrder).toEqual([project2, project3, project1]);
   });
 
-  it("syncProjects preserves current project order during snapshot recovery", () => {
+  it("syncProjects places newly discovered projects at the top during snapshot recovery", () => {
     const project1 = ProjectId.makeUnsafe("project-1");
     const project2 = ProjectId.makeUnsafe("project-2");
     const project3 = ProjectId.makeUnsafe("project-3");
@@ -79,7 +79,7 @@ describe("uiStateStore pure functions", () => {
       { id: project3, cwd: "/tmp/project-3" },
     ]);
 
-    expect(next.projectOrder).toEqual([project2, project1, project3]);
+    expect(next.projectOrder).toEqual([project3, project2, project1]);
     expect(next.projectExpandedById[project2]).toBe(false);
   });
 
@@ -127,6 +127,23 @@ describe("uiStateStore pure functions", () => {
     expect(next).not.toBe(initialState);
     expect(next.projectOrder).toEqual([project1]);
     expect(next.projectExpandedById[project1]).toBe(false);
+  });
+
+  it("syncProjects keeps multiple new projects in newest-first order", () => {
+    const project1 = ProjectId.makeUnsafe("project-1");
+    const project2 = ProjectId.makeUnsafe("project-2");
+    const project3 = ProjectId.makeUnsafe("project-3");
+    const initialState = makeUiState({
+      projectOrder: [project1],
+    });
+
+    const next = syncProjects(initialState, [
+      { id: project1, cwd: "/tmp/project-1" },
+      { id: project2, cwd: "/tmp/project-2" },
+      { id: project3, cwd: "/tmp/project-3" },
+    ]);
+
+    expect(next.projectOrder).toEqual([project3, project2, project1]);
   });
 
   it("syncThreads prunes missing thread UI state", () => {

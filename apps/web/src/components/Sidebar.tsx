@@ -132,7 +132,7 @@ import { useServerKeybindings } from "../rpc/serverState";
 import { useSidebarThreadSummaryById } from "../storeSelectors";
 import type { Project } from "../types";
 import { useTranslation } from "../i18n";
-const THREAD_PREVIEW_LIMIT = 6;
+const MAX_VISIBLE_THREADS_PER_PROJECT = 10;
 const SIDEBAR_LIST_ANIMATION_OPTIONS = {
   duration: 180,
   easing: "ease-out",
@@ -730,9 +730,6 @@ export default function Sidebar() {
   const [renamingThreadId, setRenamingThreadId] = useState<ThreadId | null>(null);
   const [renamingTitle, setRenamingTitle] = useState("");
   const [confirmingArchiveThreadId, setConfirmingArchiveThreadId] = useState<ThreadId | null>(null);
-  const [expandedThreadListsByProject, setExpandedThreadListsByProject] = useState<
-    ReadonlySet<ProjectId>
-  >(() => new Set());
   const { showThreadJumpHints, updateThreadJumpHintsVisibility } = useThreadJumpHintVisibility();
   const renamingCommittedRef = useRef(false);
   const renamingInputRef = useRef<HTMLInputElement | null>(null);
@@ -1441,46 +1438,33 @@ export default function Sidebar() {
           projectThreads.map((thread) => resolveProjectThreadStatus(thread)),
         );
         const activeThreadId = routeThreadId ?? undefined;
-        const isThreadListExpanded = expandedThreadListsByProject.has(project.id);
         const pinnedCollapsedThread =
           !project.expanded && activeThreadId
             ? (projectThreads.find((thread) => thread.id === activeThreadId) ?? null)
             : null;
         const shouldShowThreadPanel = project.expanded || pinnedCollapsedThread !== null;
-        const {
-          hasHiddenThreads,
-          hiddenThreads,
-          visibleThreads: visibleProjectThreads,
-        } = getVisibleThreadsForProject({
+        const { visibleThreads: visibleProjectThreads } = getVisibleThreadsForProject({
           threads: projectThreads,
           activeThreadId,
-          isThreadListExpanded,
-          previewLimit: THREAD_PREVIEW_LIMIT,
+          previewLimit: MAX_VISIBLE_THREADS_PER_PROJECT,
         });
-        const hiddenThreadStatus = resolveProjectStatusIndicator(
-          hiddenThreads.map((thread) => resolveProjectThreadStatus(thread)),
-        );
-        const orderedProjectThreadIds = projectThreads.map((thread) => thread.id);
+        const orderedProjectThreadIds = visibleProjectThreads.map((thread) => thread.id);
         const renderedThreadIds = pinnedCollapsedThread
           ? [pinnedCollapsedThread.id]
           : visibleProjectThreads.map((thread) => thread.id);
         const showEmptyThreadState = project.expanded && projectThreads.length === 0;
 
         return {
-          hasHiddenThreads,
-          hiddenThreadStatus,
           orderedProjectThreadIds,
           project,
           projectStatus,
           renderedThreadIds,
           showEmptyThreadState,
           shouldShowThreadPanel,
-          isThreadListExpanded,
         };
       }),
     [
       appSettings.sidebarThreadSortOrder,
-      expandedThreadListsByProject,
       routeThreadId,
       sortedProjects,
       sidebarThreadsById,
@@ -1612,15 +1596,12 @@ export default function Sidebar() {
     dragHandleProps: SortableProjectHandleProps | null,
   ) {
     const {
-      hasHiddenThreads,
-      hiddenThreadStatus,
       orderedProjectThreadIds,
       project,
       projectStatus,
       renderedThreadIds,
       showEmptyThreadState,
       shouldShowThreadPanel,
-      isThreadListExpanded,
     } = renderedProject;
     return (
       <>
@@ -1779,42 +1760,6 @@ export default function Sidebar() {
                 pr={prByThreadId.get(threadId) ?? null}
               />
             ))}
-
-          {project.expanded && hasHiddenThreads && !isThreadListExpanded && (
-            <SidebarMenuSubItem className="w-full">
-              <SidebarMenuSubButton
-                render={<button type="button" />}
-                data-thread-selection-safe
-                size="sm"
-                className="h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80"
-                onClick={() => {
-                  expandThreadListForProject(project.id);
-                }}
-              >
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  {hiddenThreadStatus && (
-                    <ThreadStatusLabel copy={copy} status={hiddenThreadStatus} compact />
-                  )}
-                  <span>{language === "it" ? "Mostra altro" : "Show more"}</span>
-                </span>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          )}
-          {project.expanded && hasHiddenThreads && isThreadListExpanded && (
-            <SidebarMenuSubItem className="w-full">
-              <SidebarMenuSubButton
-                render={<button type="button" />}
-                data-thread-selection-safe
-                size="sm"
-                className="h-6 w-full translate-x-0 justify-start px-2 text-left text-[10px] text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground/80"
-                onClick={() => {
-                  collapseThreadListForProject(project.id);
-                }}
-              >
-                <span>{language === "it" ? "Mostra meno" : "Show less"}</span>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          )}
         </SidebarMenuSub>
       </>
     );
@@ -1982,24 +1927,6 @@ export default function Sidebar() {
         });
     }
   }, [desktopUpdateButtonAction, desktopUpdateButtonDisabled, desktopUpdateState]);
-
-  const expandThreadListForProject = useCallback((projectId: ProjectId) => {
-    setExpandedThreadListsByProject((current) => {
-      if (current.has(projectId)) return current;
-      const next = new Set(current);
-      next.add(projectId);
-      return next;
-    });
-  }, []);
-
-  const collapseThreadListForProject = useCallback((projectId: ProjectId) => {
-    setExpandedThreadListsByProject((current) => {
-      if (!current.has(projectId)) return current;
-      const next = new Set(current);
-      next.delete(projectId);
-      return next;
-    });
-  }, []);
 
   const wordmark = (
     <div className="flex items-center gap-2">
