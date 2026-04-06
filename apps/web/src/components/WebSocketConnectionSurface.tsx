@@ -509,6 +509,16 @@ export function SlowRpcAckToastCoordinator() {
   const slowRequests = useSlowRpcAckRequests();
   const status = useWsConnectionStatus();
   const toastIdRef = useRef<ReturnType<typeof toastManager.add> | null>(null);
+  const dismissedSlowRequestSignatureRef = useRef<string | null>(null);
+  const slowRequestSignature = slowRequests.map((request) => request.requestId).join("|");
+
+  const dismissSlowRequestToast = useEffectEvent((signature: string) => {
+    dismissedSlowRequestSignatureRef.current = signature;
+    if (toastIdRef.current) {
+      toastManager.close(toastIdRef.current);
+      toastIdRef.current = null;
+    }
+  });
 
   useEffect(() => {
     if (getWsConnectionUiState(status) !== "connected") {
@@ -516,10 +526,24 @@ export function SlowRpcAckToastCoordinator() {
         toastManager.close(toastIdRef.current);
         toastIdRef.current = null;
       }
+      dismissedSlowRequestSignatureRef.current = null;
       return;
     }
 
     if (slowRequests.length === 0) {
+      if (toastIdRef.current) {
+        toastManager.close(toastIdRef.current);
+        toastIdRef.current = null;
+      }
+      dismissedSlowRequestSignatureRef.current = null;
+      return;
+    }
+
+    if (dismissedSlowRequestSignatureRef.current !== slowRequestSignature) {
+      dismissedSlowRequestSignatureRef.current = null;
+    }
+
+    if (dismissedSlowRequestSignatureRef.current === slowRequestSignature) {
       if (toastIdRef.current) {
         toastManager.close(toastIdRef.current);
         toastIdRef.current = null;
@@ -532,6 +556,10 @@ export function SlowRpcAckToastCoordinator() {
       timeout: 0,
       title: copy.connection.someRequestsAreSlow,
       type: "warning" as const,
+      data: {
+        onClose: () => dismissSlowRequestToast(slowRequestSignature),
+        showCloseButton: true,
+      },
     };
 
     if (toastIdRef.current) {
@@ -539,7 +567,7 @@ export function SlowRpcAckToastCoordinator() {
     } else {
       toastIdRef.current = toastManager.add(nextToast);
     }
-  }, [slowRequests, status]);
+  }, [copy, slowRequestSignature, slowRequests, status]);
 
   return null;
 }
