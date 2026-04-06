@@ -277,15 +277,17 @@ function SettingsSection({
   title,
   icon,
   headerAction,
+  collapsed = false,
   children,
 }: {
   title: string;
   icon?: ReactNode;
   headerAction?: ReactNode;
+  collapsed?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3">
+    <section className={cn("space-y-3", collapsed && "space-y-1")}>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           {icon}
@@ -293,9 +295,11 @@ function SettingsSection({
         </h2>
         {headerAction}
       </div>
-      <div className="relative overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs/5 not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]">
-        {children}
-      </div>
+      {collapsed ? null : (
+        <div className="relative overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs/5 not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-2xl)-1px)] before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]">
+          {children}
+        </div>
+      )}
     </section>
   );
 }
@@ -741,10 +745,13 @@ export function GeneralSettingsPanel() {
   const [isRefreshingProviders, setIsRefreshingProviders] = useState(false);
   const themeOptions = useMemo(() => getThemeOptions(copy), [copy]);
   const themePresets = useMemo(() => getThemePresetDefinitions(language), [language]);
-  const hiddenThemePresetId = resolvedTheme === "dark" ? "light" : "super-black";
+  const hiddenThemePresetIds = useMemo<ReadonlyArray<ThemePresetId>>(
+    () => (resolvedTheme === "dark" ? ["light", "og"] : ["super-black"]),
+    [resolvedTheme],
+  );
   const visibleThemePresets = useMemo(
-    () => themePresets.filter((preset) => preset.id !== hiddenThemePresetId),
-    [hiddenThemePresetId, themePresets],
+    () => themePresets.filter((preset) => !hiddenThemePresetIds.includes(preset.id)),
+    [hiddenThemePresetIds, themePresets],
   );
   const timestampFormatLabels = useMemo(() => getTimestampFormatLabels(copy), [copy]);
   const refreshingRef = useRef(false);
@@ -1011,14 +1018,15 @@ export function GeneralSettingsPanel() {
       : null;
 
   useEffect(() => {
-    if (themePreset === hiddenThemePresetId) {
+    if (hiddenThemePresetIds.includes(themePreset)) {
       setThemePreset(DEFAULT_THEME_PRESET);
     }
-  }, [hiddenThemePresetId, setThemePreset, themePreset]);
+  }, [hiddenThemePresetIds, setThemePreset, themePreset]);
 
   return (
     <SettingsPageContainer>
       <SettingsSection
+        collapsed={!isThemesSectionOpen}
         title={copy.settings.themes}
         headerAction={
           <Button
@@ -1034,70 +1042,66 @@ export function GeneralSettingsPanel() {
           </Button>
         }
       >
-        <Collapsible open={isThemesSectionOpen} onOpenChange={setIsThemesSectionOpen}>
-          <CollapsibleContent>
-            <SettingsRow
-              title={copy.settings.themeMode}
-              description={copy.settings.themeDescription}
-              resetAction={
-                theme !== DEFAULT_THEME ? (
-                  <SettingResetButton
-                    label={copy.settings.themeMode}
-                    onClick={() => setTheme(DEFAULT_THEME)}
-                  />
-                ) : null
-              }
-              control={
-                <Select
-                  value={theme}
-                  onValueChange={(value) => {
-                    if (value === "system" || value === "light" || value === "dark") {
-                      setTheme(value);
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    className="w-full sm:min-w-40 sm:max-w-48"
-                    aria-label={copy.settings.themePreference}
-                  >
-                    <SelectValue>
-                      {themeOptions.find((option) => option.value === theme)?.label ??
-                        copy.common.system}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectPopup align="end" alignItemWithTrigger={false}>
-                    {themeOptions.map((option) => (
-                      <SelectItem hideIndicator key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </Select>
-              }
-            />
-
-            <SettingsRow
-              title={copy.settings.themePalette}
-              description={copy.settings.themePaletteDescription}
-              resetAction={
-                themePreset !== DEFAULT_THEME_PRESET ? (
-                  <SettingResetButton
-                    label={copy.settings.themePalette}
-                    onClick={() => setThemePreset(DEFAULT_THEME_PRESET)}
-                  />
-                ) : null
-              }
+        <SettingsRow
+          title={copy.settings.themeMode}
+          description={copy.settings.themeDescription}
+          resetAction={
+            theme !== DEFAULT_THEME ? (
+              <SettingResetButton
+                label={copy.settings.themeMode}
+                onClick={() => setTheme(DEFAULT_THEME)}
+              />
+            ) : null
+          }
+          control={
+            <Select
+              value={theme}
+              onValueChange={(value) => {
+                if (value === "system" || value === "light" || value === "dark") {
+                  setTheme(value);
+                }
+              }}
             >
-              <div className="pt-1">
-                <ThemePresetPicker
-                  presets={visibleThemePresets}
-                  value={themePreset}
-                  onValueChange={setThemePreset}
-                />
-              </div>
-            </SettingsRow>
-          </CollapsibleContent>
-        </Collapsible>
+              <SelectTrigger
+                className="w-full sm:min-w-40 sm:max-w-48"
+                aria-label={copy.settings.themePreference}
+              >
+                <SelectValue>
+                  {themeOptions.find((option) => option.value === theme)?.label ??
+                    copy.common.system}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                {themeOptions.map((option) => (
+                  <SelectItem hideIndicator key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectPopup>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title={copy.settings.themePalette}
+          description={copy.settings.themePaletteDescription}
+          resetAction={
+            themePreset !== DEFAULT_THEME_PRESET ? (
+              <SettingResetButton
+                label={copy.settings.themePalette}
+                onClick={() => setThemePreset(DEFAULT_THEME_PRESET)}
+              />
+            ) : null
+          }
+        >
+          <div className="pt-1">
+            <ThemePresetPicker
+              presets={visibleThemePresets}
+              value={themePreset}
+              onValueChange={setThemePreset}
+            />
+          </div>
+        </SettingsRow>
       </SettingsSection>
 
       <SettingsSection title={copy.settings.general}>
