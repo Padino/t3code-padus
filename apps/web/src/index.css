@@ -423,7 +423,7 @@
 
 :root[data-theme-preset="og"] {
   --radius: 0.1875rem;
-  --app-font-family: "Charcoal", "Geneva", "Lucida Grande";
+  --app-font-family: "Geneva";
   --background: #d4d0c8;
   --foreground: #1f1f1f;
   --card: #efebe2;
@@ -464,7 +464,7 @@
 
 :root[data-theme-preset="og"].dark {
   --radius: 0.1875rem;
-  --app-font-family: "Charcoal", "Geneva", "Lucida Grande";
+  --app-font-family: "Geneva";
   --background: #242526;
   --foreground: #efede7;
   --card: #313235;
@@ -704,6 +704,22 @@ body::after {
 :root[data-theme-preset="og"] textarea,
 :root[data-theme-preset="og"] select {
   border-radius: 2px !important;
+}
+
+:root[data-theme-preset="og"] [data-chat-composer-form="true"] > div,
+:root[data-theme-preset="og"] [data-chat-composer-form="true"] > div > div,
+:root[data-theme-preset="og"] [data-chat-composer-form="true"] [data-chat-composer-footer="true"],
+:root[data-theme-preset="og"]
+  [data-chat-composer-form="true"]
+  [data-chat-composer-footer="true"]::before {
+  border-radius: 3px !important;
+}
+
+:root[data-theme-preset="og"] [data-chat-composer-form="true"] > div {
+  background: linear-gradient(180deg, #f5f2ea 0%, #d9d3c8 100%) !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.7),
+    inset -1px -1px 0 rgba(131, 123, 112, 0.55) !important;
 }
 
 pre,
