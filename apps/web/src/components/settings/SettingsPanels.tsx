@@ -65,7 +65,7 @@ import {
   useServerObservability,
   useServerProviders,
 } from "../../rpc/serverState";
-import { APP_LANGUAGE_LABELS, useTranslation } from "../../i18n";
+import { APP_LANGUAGE_LABELS, getUiLocale, useTranslation } from "../../i18n";
 import { type AppLanguage } from "@t3tools/contracts/settings";
 import {
   DEFAULT_THEME,
@@ -270,6 +270,120 @@ function ProviderLastChecked({
         </>
       )}
     </span>
+  );
+}
+
+function formatFutureRelativeTimeLabel(isoDate: string, language: AppLanguage): string {
+  const diffMs = new Date(isoDate).getTime() - Date.now();
+  if (diffMs <= 0) {
+    return language === "it" ? "ora" : "now";
+  }
+
+  const seconds = Math.floor(diffMs / 1_000);
+  if (seconds < 60) {
+    return language === "it" ? `tra ${seconds}s` : `in ${seconds}s`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return language === "it" ? `tra ${minutes}m` : `in ${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return language === "it" ? `tra ${hours}h` : `in ${hours}h`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return language === "it" ? `tra ${days}g` : `in ${days}d`;
+}
+
+function formatResetDateTimeLabel(isoDate: string, language: AppLanguage): string {
+  return new Intl.DateTimeFormat(getUiLocale(language), {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(isoDate));
+}
+
+function getRemainingRateLimitPercent(usedPercent: number): string {
+  const remaining = Math.max(0, Math.min(100, 100 - usedPercent));
+  return `${Math.round(remaining)}%`;
+}
+
+function getRateLimitWindowLabel(
+  windowDurationMins: number,
+  copy: ReturnType<typeof useTranslation>["copy"],
+): string {
+  if (windowDurationMins === 300) {
+    return copy.settings.rateLimitFiveHour;
+  }
+
+  if (windowDurationMins === 10_080) {
+    return copy.settings.rateLimitWeekly;
+  }
+
+  const hours = Math.round(windowDurationMins / 60);
+  return `${hours}h`;
+}
+
+function ProviderRateLimitsSection({
+  provider,
+  copy,
+  language,
+}: {
+  provider: ServerProvider;
+  copy: ReturnType<typeof useTranslation>["copy"];
+  language: AppLanguage;
+}) {
+  useRelativeTimeTick(60_000);
+
+  const rateLimitWindows = [provider.rateLimits?.primary, provider.rateLimits?.secondary].filter(
+    (window) => window !== undefined,
+  );
+
+  return (
+    <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+      <div className="text-xs font-medium text-foreground">{copy.settings.rateLimits}</div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        {copy.settings.rateLimitsDescription}
+      </div>
+
+      {rateLimitWindows.length === 0 ? (
+        <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          {copy.settings.rateLimitUnavailable}
+        </div>
+      ) : (
+        <div className="mt-3 grid gap-2">
+          {rateLimitWindows.map((window) => (
+            <div
+              key={`${window.windowDurationMins}:${window.resetsAt}`}
+              className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs font-medium text-foreground">
+                  {getRateLimitWindowLabel(window.windowDurationMins, copy)}
+                </div>
+                <div className="rounded-full border border-border/70 bg-background/70 px-2 py-0.5 text-[11px] font-mono tabular-nums text-foreground/90">
+                  {copy.settings.rateLimitRemaining}{" "}
+                  {getRemainingRateLimitPercent(window.usedPercent)}
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-1.5 text-xs sm:grid-cols-[auto_1fr] sm:items-start">
+                <span className="text-muted-foreground">{copy.settings.rateLimitResetsIn}</span>
+                <span className="font-mono tabular-nums text-foreground/90 sm:text-right">
+                  {formatFutureRelativeTimeLabel(window.resetsAt, language)}
+                </span>
+                <span className="text-muted-foreground">{copy.settings.rateLimitResetsAt}</span>
+                <span className="text-foreground/90 sm:text-right">
+                  {formatResetDateTimeLabel(window.resetsAt, language)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1612,6 +1726,14 @@ export function GeneralSettingsPanel() {
                           ) : null}
                         </label>
                       </div>
+                    ) : null}
+
+                    {providerCard.provider === "codex" && providerCard.liveProvider ? (
+                      <ProviderRateLimitsSection
+                        provider={providerCard.liveProvider}
+                        copy={copy}
+                        language={language}
+                      />
                     ) : null}
 
                     <div className="border-t border-border/60 px-4 py-3 sm:px-5">

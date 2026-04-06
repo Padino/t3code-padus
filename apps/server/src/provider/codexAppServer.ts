@@ -1,6 +1,10 @@
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
 import readline from "node:readline";
-import { readCodexAccountSnapshot, type CodexAccountSnapshot } from "./codexAccount";
+import {
+  readCodexAccountSnapshot,
+  readCodexRateLimitsSnapshot,
+  type CodexAccountSnapshot,
+} from "./codexAccount";
 
 interface JsonRpcProbeResponse {
   readonly id?: unknown;
@@ -57,8 +61,19 @@ export async function probeCodexAccount(input: {
     const output = readline.createInterface({ input: child.stdout });
 
     let completed = false;
+    let accountSnapshot: CodexAccountSnapshot | undefined;
+    let rateLimitFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearRateLimitFallbackTimer = () => {
+      if (rateLimitFallbackTimer === null) {
+        return;
+      }
+      clearTimeout(rateLimitFallbackTimer);
+      rateLimitFallbackTimer = null;
+    };
 
     const cleanup = () => {
+      clearRateLimitFallbackTimer();
       output.removeAllListeners();
       output.close();
       child.removeAllListeners();
@@ -98,6 +113,16 @@ export async function probeCodexAccount(input: {
       child.stdin.write(`${JSON.stringify(message)}\n`);
     };
 
+    const finishWithAccount = () => {
+      const resolvedAccount = accountSnapshot;
+      if (!resolvedAccount) {
+        fail(new Error("Codex account probe completed without an account snapshot."));
+        return;
+      }
+
+      finish(() => resolve(resolvedAccount));
+    };
+
     output.on("line", (line) => {
       let parsed: unknown;
       try {
@@ -131,7 +156,30 @@ export async function probeCodexAccount(input: {
           return;
         }
 
-        finish(() => resolve(readCodexAccountSnapshot(response.result)));
+        accountSnapshot = readCodexAccountSnapshot(response.result);
+        writeMessage({ id: 3, method: "account/rateLimits/read", params: {} });
+        rateLimitFallbackTimer = setTimeout(() => {
+          finishWithAccount();
+        }, 1_000);
+        return;
+      }
+
+      if (response.id === 3) {
+        clearRateLimitFallbackTimer();
+        const resolvedAccount = accountSnapshot;
+        if (!resolvedAccount) {
+          fail(new Error("account/rateLimits/read completed before account/read."));
+          return;
+        }
+
+        const errorMessage = readErrorMessage(response);
+        if (errorMessage) {
+          finish(() => resolve(resolvedAccount));
+          return;
+        }
+
+        const rateLimits = readCodexRateLimitsSnapshot(response.result);
+        finish(() => resolve(rateLimits ? { ...resolvedAccount, rateLimits } : resolvedAccount));
       }
     });
 

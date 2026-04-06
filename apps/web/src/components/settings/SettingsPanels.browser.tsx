@@ -1,6 +1,11 @@
 import "../../index.css";
 
-import { DEFAULT_SERVER_SETTINGS, type NativeApi, type ServerConfig } from "@t3tools/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS,
+  type NativeApi,
+  type ServerConfig,
+  type ServerProvider,
+} from "@t3tools/contracts";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -26,6 +31,24 @@ function createBaseServerConfig(): ServerConfig {
       otlpMetricsEnabled: false,
     },
     settings: DEFAULT_SERVER_SETTINGS,
+  };
+}
+
+function createCodexProvider(overrides: Partial<ServerProvider> = {}): ServerProvider {
+  return {
+    provider: "codex",
+    enabled: true,
+    installed: true,
+    version: "1.0.0",
+    status: "ready",
+    auth: {
+      status: "authenticated",
+      type: "plus",
+      label: "ChatGPT Plus Subscription",
+    },
+    checkedAt: "2026-04-06T10:00:00.000Z",
+    models: [],
+    ...overrides,
   };
 }
 
@@ -87,5 +110,43 @@ describe("GeneralSettingsPanel observability", () => {
     await openLogsButton.click();
 
     expect(openInEditor).toHaveBeenCalledWith("/repo/project/.t3/logs", "cursor");
+  });
+
+  it("shows codex billing limits inside provider details", async () => {
+    setServerConfigSnapshot({
+      ...createBaseServerConfig(),
+      providers: [
+        createCodexProvider({
+          rateLimits: {
+            limitId: "codex",
+            planType: "plus",
+            primary: {
+              usedPercent: 73,
+              windowDurationMins: 300,
+              resetsAt: "2026-04-06T15:00:00.000Z",
+            },
+            secondary: {
+              usedPercent: 92,
+              windowDurationMins: 10080,
+              resetsAt: "2026-04-09T15:00:00.000Z",
+            },
+          },
+        }),
+      ],
+    });
+
+    await render(
+      <AppAtomRegistryProvider>
+        <GeneralSettingsPanel />
+      </AppAtomRegistryProvider>,
+    );
+
+    await page.getByLabelText("Show details: Codex").click();
+
+    await expect.element(page.getByText("Billing limits")).toBeInTheDocument();
+    await expect.element(page.getByText("5h reset")).toBeInTheDocument();
+    await expect.element(page.getByText("Weekly reset")).toBeInTheDocument();
+    await expect.element(page.getByText("Remaining 27%")).toBeInTheDocument();
+    await expect.element(page.getByText("Remaining 8%")).toBeInTheDocument();
   });
 });

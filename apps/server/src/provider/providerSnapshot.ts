@@ -2,6 +2,7 @@ import type {
   ServerProvider,
   ServerProviderAuth,
   ServerProviderModel,
+  ServerProviderRateLimits,
   ServerProviderState,
 } from "@t3tools/contracts";
 import { Effect, Stream } from "effect";
@@ -23,6 +24,7 @@ export interface ProviderProbeResult {
   readonly status: Exclude<ServerProviderState, "disabled">;
   readonly auth: ServerProviderAuth;
   readonly message?: string;
+  readonly rateLimits?: ServerProviderRateLimits;
 }
 
 export function nonEmptyTrimmed(value: string | undefined): string | undefined {
@@ -141,6 +143,7 @@ export function buildServerProvider(input: {
     checkedAt: input.checkedAt,
     ...(input.probe.message ? { message: input.probe.message } : {}),
     models: input.models,
+    ...(input.probe.rateLimits ? { rateLimits: input.probe.rateLimits } : {}),
   };
 }
 
