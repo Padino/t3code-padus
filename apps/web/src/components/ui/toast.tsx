@@ -25,6 +25,7 @@ export type ThreadToastData = {
   tooltipStyle?: boolean;
   dismissAfterVisibleMs?: number;
   hideCopyButton?: boolean;
+  onClose?: () => void;
   showCloseButton?: boolean;
 };
 
@@ -60,11 +61,14 @@ function CopyErrorButton({ text }: { text: string }) {
   );
 }
 
-function CloseToastButton({ toastId }: { toastId: ToastId }) {
+function CloseToastButton({ onClose, toastId }: { onClose?: () => void; toastId: ToastId }) {
   return (
     <button
       className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground opacity-60 transition-opacity hover:opacity-100"
-      onClick={() => toastManager.close(toastId)}
+      onClick={() => {
+        onClose?.();
+        toastManager.close(toastId);
+      }}
       title="Dismiss"
       type="button"
     >
@@ -334,7 +338,10 @@ function Toasts({ position = "top-right" }: { position: ToastPosition }) {
                             <CopyErrorButton text={toast.description} />
                           )}
                         {toast.data?.showCloseButton ? (
-                          <CloseToastButton toastId={toast.id} />
+                          <CloseToastButton
+                            toastId={toast.id}
+                            {...(toast.data?.onClose ? { onClose: toast.data.onClose } : {})}
+                          />
                         ) : null}
                       </div>
                     </div>
@@ -435,7 +442,10 @@ function AnchoredToasts() {
                                   <CopyErrorButton text={toast.description} />
                                 )}
                               {toast.data?.showCloseButton ? (
-                                <CloseToastButton toastId={toast.id} />
+                                <CloseToastButton
+                                  toastId={toast.id}
+                                  {...(toast.data?.onClose ? { onClose: toast.data.onClose } : {})}
+                                />
                               ) : null}
                             </div>
                           </div>
