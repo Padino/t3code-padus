@@ -422,7 +422,7 @@
 }
 
 :root[data-theme-preset="og"] {
-  --radius: 0.375rem;
+  --radius: 0.1875rem;
   --app-font-family: "Charcoal", "Geneva", "Lucida Grande";
   --background: #d4d0c8;
   --foreground: #1f1f1f;
@@ -447,8 +447,8 @@
   --success-foreground: #1a4725;
   --warning: #d79e32;
   --warning-foreground: #6b4510;
-  --app-glow: rgba(255, 255, 255, 0.22);
-  --app-glow-secondary: rgba(53, 99, 161, 0.12);
+  --app-glow: rgba(255, 255, 255, 0.18);
+  --app-glow-secondary: rgba(53, 99, 161, 0.08);
   --body-pattern-opacity: 0.55;
   --body-pattern-size: 8px 8px;
   --body-pattern-image: linear-gradient(
@@ -463,7 +463,7 @@
 }
 
 :root[data-theme-preset="og"].dark {
-  --radius: 0.375rem;
+  --radius: 0.1875rem;
   --app-font-family: "Charcoal", "Geneva", "Lucida Grande";
   --background: #242526;
   --foreground: #efede7;
@@ -624,6 +624,86 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"],
+:root[data-theme-preset="og"] button,
+:root[data-theme-preset="og"] [role="button"] {
+  border-radius: 3px !important;
+  border-color: #6f6b64 !important;
+  background: linear-gradient(180deg, #f8f6f0 0%, #e4dfd4 100%) !important;
+  color: #1b1b1b !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px -1px 0 rgba(124, 117, 106, 0.7),
+    1px 1px 0 rgba(83, 79, 72, 0.45) !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"]:hover,
+:root[data-theme-preset="og"] button:hover,
+:root[data-theme-preset="og"] [role="button"]:hover {
+  background: linear-gradient(180deg, #fbfaf7 0%, #e8e2d7 100%) !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"]:active,
+:root[data-theme-preset="og"] [data-slot="button"][data-pressed],
+:root[data-theme-preset="og"] button:active,
+:root[data-theme-preset="og"] [role="button"]:active {
+  background: linear-gradient(180deg, #d3cec2 0%, #ece8de 100%) !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(112, 106, 96, 0.75),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.82) !important;
+  translate: 1px 1px;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"][data-disabled],
+:root[data-theme-preset="og"] [data-slot="button"]:disabled,
+:root[data-theme-preset="og"] button:disabled {
+  color: #77736d !important;
+  background: linear-gradient(180deg, #ece9e1 0%, #d7d2c7 100%) !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.75),
+    inset -1px -1px 0 rgba(130, 124, 115, 0.45) !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"]::before,
+:root[data-theme-preset="og"] button::before,
+:root[data-theme-preset="og"] [role="button"]::before {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="button"] svg,
+:root[data-theme-preset="og"] button svg,
+:root[data-theme-preset="og"] [role="button"] svg {
+  opacity: 0.92 !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="input-group"],
+:root[data-theme-preset="og"] [data-slot="input-group"]::before,
+:root[data-theme-preset="og"] [data-slot="card"],
+:root[data-theme-preset="og"] [data-slot="card"]::before,
+:root[data-theme-preset="og"] [data-slot="dialog"],
+:root[data-theme-preset="og"] [data-slot="dialog"]::before,
+:root[data-theme-preset="og"] [data-slot="popover"],
+:root[data-theme-preset="og"] [data-slot="popover"]::before {
+  border-radius: 3px !important;
+}
+
+:root[data-theme-preset="og"] [data-slot="input-group"],
+:root[data-theme-preset="og"] [data-slot="card"],
+:root[data-theme-preset="og"] [data-slot="dialog"],
+:root[data-theme-preset="og"] [data-slot="popover"] {
+  border-color: #8a8478 !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.72),
+    inset -1px -1px 0 rgba(134, 127, 117, 0.55) !important;
+}
+
+:root[data-theme-preset="og"] input,
+:root[data-theme-preset="og"] textarea,
+:root[data-theme-preset="og"] select {
+  border-radius: 2px !important;
 }
 
 pre,
