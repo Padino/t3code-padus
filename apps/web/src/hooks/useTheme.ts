@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
-type Theme = "light" | "dark" | "system";
+export type Theme = "light" | "dark" | "system";
+export type ThemePalette = "default" | "sage";
 type ThemeSnapshot = {
   theme: Theme;
+  themePalette: ThemePalette;
   systemDark: boolean;
 };
 
-const STORAGE_KEY = "t3code:theme";
+const THEME_STORAGE_KEY = "t3code:theme";
+const THEME_PALETTE_STORAGE_KEY = "t3code:theme-palette";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 let listeners: Array<() => void> = [];
 let lastSnapshot: ThemeSnapshot | null = null;
 let lastDesktopTheme: Theme | null = null;
+
 function emitChange() {
   for (const listener of listeners) listener();
 }
@@ -21,17 +25,24 @@ function getSystemDark(): boolean {
 }
 
 function getStored(): Theme {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(THEME_STORAGE_KEY);
   if (raw === "light" || raw === "dark" || raw === "system") return raw;
   return "system";
 }
 
-function applyTheme(theme: Theme, suppressTransitions = false) {
+function getStoredPalette(): ThemePalette {
+  const raw = localStorage.getItem(THEME_PALETTE_STORAGE_KEY);
+  if (raw === "default" || raw === "sage") return raw;
+  return "default";
+}
+
+function applyTheme(theme: Theme, themePalette: ThemePalette, suppressTransitions = false) {
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }
   const isDark = theme === "dark" || (theme === "system" && getSystemDark());
   document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.dataset.themePalette = themePalette;
   syncDesktopTheme(theme);
   if (suppressTransitions) {
     // Force a reflow so the no-transitions class takes effect before removal
@@ -58,17 +69,23 @@ function syncDesktopTheme(theme: Theme) {
 }
 
 // Apply immediately on module load to prevent flash
-applyTheme(getStored());
+applyTheme(getStored(), getStoredPalette());
 
 function getSnapshot(): ThemeSnapshot {
   const theme = getStored();
+  const themePalette = getStoredPalette();
   const systemDark = theme === "system" ? getSystemDark() : false;
 
-  if (lastSnapshot && lastSnapshot.theme === theme && lastSnapshot.systemDark === systemDark) {
+  if (
+    lastSnapshot &&
+    lastSnapshot.theme === theme &&
+    lastSnapshot.themePalette === themePalette &&
+    lastSnapshot.systemDark === systemDark
+  ) {
     return lastSnapshot;
   }
 
-  lastSnapshot = { theme, systemDark };
+  lastSnapshot = { theme, themePalette, systemDark };
   return lastSnapshot;
 }
 
@@ -78,15 +95,17 @@ function subscribe(listener: () => void): () => void {
   // Listen for system preference changes
   const mq = window.matchMedia(MEDIA_QUERY);
   const handleChange = () => {
-    if (getStored() === "system") applyTheme("system", true);
+    if (getStored() === "system") {
+      applyTheme("system", getStoredPalette(), true);
+    }
     emitChange();
   };
   mq.addEventListener("change", handleChange);
 
   // Listen for storage changes from other tabs
   const handleStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      applyTheme(getStored(), true);
+    if (e.key === THEME_STORAGE_KEY || e.key === THEME_PALETTE_STORAGE_KEY) {
+      applyTheme(getStored(), getStoredPalette(), true);
       emitChange();
     }
   };
@@ -102,20 +121,27 @@ function subscribe(listener: () => void): () => void {
 export function useTheme() {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   const theme = snapshot.theme;
+  const themePalette = snapshot.themePalette;
 
   const resolvedTheme: "light" | "dark" =
     theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next, true);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    applyTheme(next, getStoredPalette(), true);
+    emitChange();
+  }, []);
+
+  const setThemePalette = useCallback((next: ThemePalette) => {
+    localStorage.setItem(THEME_PALETTE_STORAGE_KEY, next);
+    applyTheme(getStored(), next, true);
     emitChange();
   }, []);
 
   // Keep DOM in sync on mount/change
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(theme, themePalette);
+  }, [theme, themePalette]);
 
-  return { theme, setTheme, resolvedTheme } as const;
+  return { theme, setTheme, themePalette, setThemePalette, resolvedTheme } as const;
 }

@@ -390,17 +390,16 @@ export function resolveProjectStatusIndicator(
 export function getVisibleThreadsForProject<T extends Pick<Thread, "id">>(input: {
   threads: readonly T[];
   activeThreadId: T["id"] | undefined;
-  isThreadListExpanded: boolean;
   previewLimit: number;
 }): {
   hasHiddenThreads: boolean;
   visibleThreads: T[];
   hiddenThreads: T[];
 } {
-  const { activeThreadId, isThreadListExpanded, previewLimit, threads } = input;
+  const { activeThreadId, previewLimit, threads } = input;
   const hasHiddenThreads = threads.length > previewLimit;
 
-  if (!hasHiddenThreads || isThreadListExpanded) {
+  if (!hasHiddenThreads) {
     return {
       hasHiddenThreads,
       hiddenThreads: [],
@@ -426,12 +425,13 @@ export function getVisibleThreadsForProject<T extends Pick<Thread, "id">>(input:
     };
   }
 
-  const visibleThreadIds = new Set([...previewThreads, activeThread].map((thread) => thread.id));
+  const visibleThreads = [...previewThreads.slice(0, Math.max(0, previewLimit - 1)), activeThread];
+  const visibleThreadIds = new Set(visibleThreads.map((thread) => thread.id));
 
   return {
     hasHiddenThreads: true,
     hiddenThreads: threads.filter((thread) => !visibleThreadIds.has(thread.id)),
-    visibleThreads: threads.filter((thread) => visibleThreadIds.has(thread.id)),
+    visibleThreads,
   };
 }
 
@@ -520,9 +520,13 @@ export function getProjectSortTimestamp(
   projectThreads: readonly SidebarThreadSortInput[],
   sortOrder: Exclude<SidebarProjectSortOrder, "manual">,
 ): number {
-  if (projectThreads.length > 0) {
+  if (sortOrder === "updated_at" && projectThreads.length > 0) {
     return projectThreads.reduce(
-      (latest, thread) => Math.max(latest, getThreadSortTimestamp(thread, sortOrder)),
+      (latest, thread) =>
+        Math.max(
+          latest,
+          toSortableTimestamp(thread.updatedAt ?? thread.createdAt) ?? Number.NEGATIVE_INFINITY,
+        ),
       Number.NEGATIVE_INFINITY,
     );
   }
