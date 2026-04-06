@@ -5,6 +5,7 @@ import type {
   ServerProvider,
   ServerProviderModel,
   ServerProviderAuth,
+  ServerProviderRateLimits,
   ServerProviderState,
 } from "@t3tools/contracts";
 import {
@@ -42,6 +43,7 @@ import {
   adjustCodexModelsForAccount,
   codexAuthSubLabel,
   codexAuthSubType,
+  type CodexRateLimitsSnapshot,
   type CodexAccountSnapshot,
 } from "../codexAccount";
 import { probeCodexAccount } from "../codexAppServer";
@@ -306,6 +308,22 @@ const probeCodexCapabilities = (input: {
     }),
   );
 
+function toServerProviderRateLimits(
+  rateLimits: CodexRateLimitsSnapshot | undefined,
+): ServerProviderRateLimits | undefined {
+  if (!rateLimits) {
+    return undefined;
+  }
+
+  return {
+    ...(rateLimits.limitId ? { limitId: rateLimits.limitId } : {}),
+    ...(rateLimits.limitName ? { limitName: rateLimits.limitName } : {}),
+    ...(rateLimits.planType ? { planType: rateLimits.planType } : {}),
+    ...(rateLimits.primary ? { primary: rateLimits.primary } : {}),
+    ...(rateLimits.secondary ? { secondary: rateLimits.secondary } : {}),
+  };
+}
+
 const runCodexCommand = Effect.fn("runCodexCommand")(function* (args: ReadonlyArray<string>) {
   const settingsService = yield* ServerSettingsService;
   const codexSettings = yield* settingsService.getSettings.pipe(
@@ -463,6 +481,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
       })
     : undefined;
   const resolvedModels = adjustCodexModelsForAccount(models, account);
+  const rateLimits = toServerProviderRateLimits(account?.rateLimits);
 
   if (Result.isFailure(authProbe)) {
     const error = authProbe.failure;
@@ -480,6 +499,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
           error instanceof Error
             ? `Could not verify Codex authentication status: ${error.message}.`
             : "Could not verify Codex authentication status.",
+        ...(rateLimits ? { rateLimits } : {}),
       },
     });
   }
@@ -496,6 +516,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         status: "warning",
         auth: { status: "unknown" },
         message: "Could not verify Codex authentication status. Timed out while running command.",
+        ...(rateLimits ? { rateLimits } : {}),
       },
     });
   }
@@ -517,6 +538,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         ...(authType ? { type: authType } : {}),
         ...(authLabel ? { label: authLabel } : {}),
       },
+      ...(rateLimits ? { rateLimits } : {}),
       ...(parsed.message ? { message: parsed.message } : {}),
     },
   });

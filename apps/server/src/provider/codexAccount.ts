@@ -15,6 +15,21 @@ export interface CodexAccountSnapshot {
   readonly type: "apiKey" | "chatgpt" | "unknown";
   readonly planType: CodexPlanType | null;
   readonly sparkEnabled: boolean;
+  readonly rateLimits?: CodexRateLimitsSnapshot;
+}
+
+export interface CodexRateLimitWindowSnapshot {
+  readonly usedPercent: number;
+  readonly windowDurationMins: number;
+  readonly resetsAt: string;
+}
+
+export interface CodexRateLimitsSnapshot {
+  readonly limitId?: string;
+  readonly limitName?: string;
+  readonly planType?: string;
+  readonly primary?: CodexRateLimitWindowSnapshot;
+  readonly secondary?: CodexRateLimitWindowSnapshot;
 }
 
 export const CODEX_DEFAULT_MODEL = "gpt-5.3-codex";
@@ -30,6 +45,42 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function asFiniteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function epochSecondsToIsoDate(value: number | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const date = new Date(value * 1_000);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function readCodexRateLimitWindow(value: unknown): CodexRateLimitWindowSnapshot | undefined {
+  const record = asObject(value);
+  const usedPercent = asFiniteNumber(record?.usedPercent);
+  const windowDurationMins = asFiniteNumber(record?.windowDurationMins);
+  const resetsAt = epochSecondsToIsoDate(asFiniteNumber(record?.resetsAt));
+
+  if (
+    usedPercent === undefined ||
+    windowDurationMins === undefined ||
+    resetsAt === undefined ||
+    !Number.isInteger(windowDurationMins) ||
+    windowDurationMins < 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    usedPercent,
+    windowDurationMins,
+    resetsAt,
+  };
 }
 
 export function readCodexAccountSnapshot(response: unknown): CodexAccountSnapshot {
@@ -58,6 +109,30 @@ export function readCodexAccountSnapshot(response: unknown): CodexAccountSnapsho
     type: "unknown",
     planType: null,
     sparkEnabled: false,
+  };
+}
+
+export function readCodexRateLimitsSnapshot(
+  response: unknown,
+): CodexRateLimitsSnapshot | undefined {
+  const record = asObject(response);
+  const rateLimits = asObject(record?.rateLimits) ?? record;
+  const primary = readCodexRateLimitWindow(rateLimits?.primary);
+  const secondary = readCodexRateLimitWindow(rateLimits?.secondary);
+  const limitId = asString(rateLimits?.limitId);
+  const limitName = asString(rateLimits?.limitName);
+  const planType = asString(rateLimits?.planType);
+
+  if (!limitId && !limitName && !planType && !primary && !secondary) {
+    return undefined;
+  }
+
+  return {
+    ...(limitId ? { limitId } : {}),
+    ...(limitName ? { limitName } : {}),
+    ...(planType ? { planType } : {}),
+    ...(primary ? { primary } : {}),
+    ...(secondary ? { secondary } : {}),
   };
 }
 

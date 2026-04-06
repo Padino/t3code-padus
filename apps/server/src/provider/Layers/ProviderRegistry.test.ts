@@ -220,6 +220,57 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest()))(
         ),
       );
 
+      it.effect("includes codex rate limits in the provider snapshot when available", () =>
+        Effect.gen(function* () {
+          yield* withTempCodexHome();
+          const status = yield* checkCodexProviderStatus(() =>
+            Effect.succeed({
+              type: "chatgpt" as const,
+              planType: "plus" as const,
+              sparkEnabled: false,
+              rateLimits: {
+                limitId: "codex",
+                planType: "plus",
+                primary: {
+                  usedPercent: 73,
+                  windowDurationMins: 300,
+                  resetsAt: "2026-04-05T08:52:41.000Z",
+                },
+                secondary: {
+                  usedPercent: 92,
+                  windowDurationMins: 10_080,
+                  resetsAt: "2026-04-07T16:24:05.000Z",
+                },
+              },
+            }),
+          );
+
+          assert.deepStrictEqual(status.rateLimits, {
+            limitId: "codex",
+            planType: "plus",
+            primary: {
+              usedPercent: 73,
+              windowDurationMins: 300,
+              resetsAt: "2026-04-05T08:52:41.000Z",
+            },
+            secondary: {
+              usedPercent: 92,
+              windowDurationMins: 10_080,
+              resetsAt: "2026-04-07T16:24:05.000Z",
+            },
+          });
+        }).pipe(
+          Effect.provide(
+            mockSpawnerLayer((args) => {
+              const joined = args.join(" ");
+              if (joined === "--version") return { stdout: "codex 1.0.0\n", stderr: "", code: 0 };
+              if (joined === "login status") return { stdout: "Logged in\n", stderr: "", code: 0 };
+              throw new Error(`Unexpected args: ${joined}`);
+            }),
+          ),
+        ),
+      );
+
       it.effect("hides spark from codex models for unsupported chatgpt plans", () =>
         Effect.gen(function* () {
           yield* withTempCodexHome();

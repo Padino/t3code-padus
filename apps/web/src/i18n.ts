@@ -150,6 +150,16 @@ function getUiCopy(language: AppLanguage) {
         ? "Si apre nell’editor preferito."
         : "Opens in your preferred editor.",
       providers: it ? "Provider" : "Providers",
+      rateLimitFiveHour: it ? "Reset 5h" : "5h reset",
+      rateLimitRemaining: it ? "Residuo" : "Remaining",
+      rateLimitResetsAt: it ? "Reset il" : "Resets at",
+      rateLimitResetsIn: it ? "Reset tra" : "Resets in",
+      rateLimitUnavailable: it ? "Dati non disponibili." : "Data unavailable.",
+      rateLimitWeekly: it ? "Reset settimanale" : "Weekly reset",
+      rateLimits: it ? "Limiti tariffari" : "Billing limits",
+      rateLimitsDescription: it
+        ? "Budget Codex residuo per la finestra di 5 ore e per quella settimanale."
+        : "Remaining Codex budget for the 5-hour and weekly windows.",
       refreshProviderStatus: it ? "Aggiorna stato provider" : "Refresh provider status",
       restoreDefaultsConfirmation: (labels: string) =>
         it

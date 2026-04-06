@@ -56,6 +56,22 @@ export const ServerProviderModel = Schema.Struct({
 });
 export type ServerProviderModel = typeof ServerProviderModel.Type;
 
+export const ServerProviderRateLimitWindow = Schema.Struct({
+  usedPercent: Schema.Number,
+  windowDurationMins: NonNegativeInt,
+  resetsAt: IsoDateTime,
+});
+export type ServerProviderRateLimitWindow = typeof ServerProviderRateLimitWindow.Type;
+
+export const ServerProviderRateLimits = Schema.Struct({
+  limitId: Schema.optional(TrimmedNonEmptyString),
+  limitName: Schema.optional(TrimmedNonEmptyString),
+  planType: Schema.optional(TrimmedNonEmptyString),
+  primary: Schema.optional(ServerProviderRateLimitWindow),
+  secondary: Schema.optional(ServerProviderRateLimitWindow),
+});
+export type ServerProviderRateLimits = typeof ServerProviderRateLimits.Type;
+
 export const ServerProvider = Schema.Struct({
   provider: ProviderKind,
   enabled: Schema.Boolean,
@@ -66,6 +82,7 @@ export const ServerProvider = Schema.Struct({
   checkedAt: IsoDateTime,
   message: Schema.optional(TrimmedNonEmptyString),
   models: Schema.Array(ServerProviderModel),
+  rateLimits: Schema.optional(ServerProviderRateLimits),
 });
 export type ServerProvider = typeof ServerProvider.Type;
 
