@@ -489,7 +489,7 @@ function TerminalViewport({
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "style", "data-theme-palette"],
+      attributeFilter: ["class", "style", "data-theme-preset"],
     });
 
     const applyTerminalEvent = (event: TerminalEvent) => {
